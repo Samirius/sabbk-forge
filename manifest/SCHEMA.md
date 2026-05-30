@@ -27,8 +27,9 @@ guarantee is installed. (A YAML front-end is Phase-3 polish, not spike-critical.
 | `runtime.harness` | string | yes | `pi-coding-agent` or `pi-agent-core`. |
 | `runtime.pinned_version` | string | yes | Exact pi version. Must match `package.json`. Never a range. |
 | `model.provider` | string | yes | pi provider key, e.g. `anthropic`, `openai`, `google`. |
-| `model.id` | string | yes | Model id pi expects. **Confirm via `pi --models` before first live run.** |
+| `model.id` | string | yes | Model id pi expects. **Confirm via `pi --list-models` before first live run.** |
 | `model.thinking` | string | no | `off`/`minimal`/`low`/`medium`/`high`/`xhigh`. Cheap default = `low`. |
+| `model.stages` | object | no | Per-stage model/thinking overrides (cost tiering), e.g. `{ "build": {"id":"claude-haiku-4-5","thinking":"low"} }` — smart planner, cheap builder. Adapter falls back to `model.id` for stages not listed. |
 | `tools` | object | yes | Per-stage tool allowlist (arrays of pi built-in tool names: `read bash edit write grep find ls`). Least-privilege per stage. |
 | `playbook` | string | yes | Repo-relative path to the domain playbook this agent serves. |
 | `boundaries` | string[] | yes | Hard rules. Rendered verbatim into `AGENTS.md`. At least the git + secrets + scope rules. |
