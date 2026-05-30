@@ -1,0 +1,19 @@
+{
+  "name": "demo",
+  "description": "2-gear handoff: Pi PM assigns a request -> Pi Coding Agent executes it. Proves the orchestrator + the git/handoff baton end-to-end.",
+  "steps": [
+    {
+      "agent": "pi-pm",
+      "stage": "assign",
+      "produces": "spike/workdir/pi-coding-spike/INBOX-handoff.md",
+      "message": "Read ./pipeline/REQUEST.md. Write a Sabbk-compliant handoff to ./spike/workdir/pi-coding-spike/INBOX-handoff.md that assigns the request to agent pi-coding-spike. Use the handoff schema (YAML frontmatter from: pi-pm, to: pi-coding-spike, date, tier: 2, playbook: software, phase: BUILD, priority) + a Summary, Facts, and an Actions Needed checklist. Cite Playbook + Phase. Do not do the coding work yourself."
+    },
+    {
+      "agent": "pi-coding-spike",
+      "stage": "pipeline",
+      "consumes": "spike/workdir/pi-coding-spike/INBOX-handoff.md",
+      "delegate": "run-spike",
+      "message": "Your assignment is in ./INBOX-handoff.md. Execute it via your spec->plan->build->validate pipeline."
+    }
+  ]
+}
