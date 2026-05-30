@@ -1,0 +1,19 @@
+{
+  "name": "build-run-pipeline",
+  "description": "DOGFOOD: Pi PM assigns the generic-run-pipeline backlog item -> Pi Software builds it (repo-build mode). The forge upgrading its own pipeline runner.",
+  "steps": [
+    {
+      "agent": "pi-pm",
+      "stage": "assign",
+      "produces": "spike/workdir/pi-software/INBOX-handoff.md",
+      "message": "Read ./pipeline/REQUEST-run-pipeline.md. Write a Sabbk-compliant handoff to ./spike/workdir/pi-software/INBOX-handoff.md assigning it to pi-software (frontmatter from: pi-pm, to: pi-software, tier: 2, playbook: software, phase: BUILD, priority: medium) + Summary, Facts, and an Actions checklist mirroring the acceptance criteria. Cite Playbook + Phase. Do NOT build it yourself."
+    },
+    {
+      "agent": "pi-software",
+      "stage": "pipeline",
+      "consumes": "spike/workdir/pi-software/INBOX-handoff.md",
+      "delegate": "repo-build",
+      "message": "Build per ./INBOX-handoff.md + pipeline/REQUEST-run-pipeline.md: make bin/run-pipeline.sh data-driven on the pipeline JSON and add a repo-build mode. spec->plan->build->validate on a -ai branch; keep the diff focused; run jigs; write VALIDATION.md."
+    }
+  ]
+}
