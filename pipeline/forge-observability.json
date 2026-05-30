@@ -1,0 +1,19 @@
+{
+  "name": "forge-observability",
+  "description": "DOGFOOD: Pi PM assigns the 'run observability' backlog item -> Pi Software builds it through spec->plan->build->validate. The forge improving itself via its own pipeline.",
+  "steps": [
+    {
+      "agent": "pi-pm",
+      "stage": "assign",
+      "produces": "spike/workdir/pi-software/INBOX-handoff.md",
+      "message": "Read ./pipeline/REQUEST-observability.md. Write a Sabbk-compliant handoff to ./spike/workdir/pi-software/INBOX-handoff.md assigning it to pi-software (frontmatter from: pi-pm, to: pi-software, tier: 2, playbook: software, phase: BUILD, priority: medium) + Summary, Facts, and an Actions checklist mirroring the acceptance criteria. Cite Playbook + Phase. Do NOT build it yourself."
+    },
+    {
+      "agent": "pi-software",
+      "stage": "pipeline",
+      "consumes": "spike/workdir/pi-software/INBOX-handoff.md",
+      "delegate": "repo-build",
+      "message": "Your assignment is in ./INBOX-handoff.md (+ pipeline/REQUEST-observability.md). Build it on a -ai branch via spec->plan->build->validate: write lib/run-log.mjs + bin/forge-log.sh, wire run-spike.sh, keep the diff small, run jigs, and write VALIDATION.md."
+    }
+  ]
+}
