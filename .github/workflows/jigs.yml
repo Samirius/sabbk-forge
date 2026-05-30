@@ -1,0 +1,14 @@
+name: jigs
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  jigs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: bash jigs/run-all.sh
