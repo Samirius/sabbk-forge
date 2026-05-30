@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "_comment": "Agent Roster Manifest — the single machine-readable source of truth. JSON (not YAML) on purpose: Node parses it natively with zero dependencies, so a cheap model on a bare VM can never hit a YAML-parser gap. See manifest/SCHEMA.md for every field. One entry per agent. This spike ships ONE agent; the full roster (Pi PM/Marketing/CRO/Brand/Design/Sales/Software) is added the same way after the spike is approved.",
+  "agents": [
+    {
+      "id": "pi-coding-spike",
+      "name": "Spike",
+      "tier": 2,
+      "kind": "coding",
+      "role": "Pi Coding Agent (spike): take one internal forge task from spec -> plan -> build -> validate, with one human checkpoint.",
+      "runtime": { "harness": "pi-coding-agent", "pinned_version": "0.78.0" },
+      "model": {
+        "provider": "anthropic",
+        "id": "claude-haiku-4-5",
+        "thinking": "low",
+        "_note": "VERIFIED present in pi 0.78.0 via `pi --list-models haiku` (anthropic, 200K ctx, thinking). The adapter passes --model verbatim; this is the only place the id lives."
+      },
+      "tools": {
+        "spec": ["read", "grep", "ls"],
+        "plan": ["read", "grep", "ls"],
+        "build": ["read", "bash", "edit", "write"],
+        "validate": ["read", "bash", "grep", "ls"]
+      },
+      "playbook": "sabbk-workshop/playbooks/software/PLAYBOOK.md",
+      "boundaries": [
+        "never touch other agents' workspaces",
+        "never read shared/personal/ or any restricted/ folder",
+        "no client or Banafah work of any kind",
+        "AI branches end in -ai; pull before push; never force-push",
+        "credentials come only from the environment; never print or commit a secret",
+        "write only inside spike/workdir/pi-coding-spike/; do not modify other repos"
+      ],
+      "budget": { "max_turns": 8, "max_usd": 0.50, "timeout_sec": 240 },
+      "gear": {
+        "consumes": [
+          { "type": "task", "path": "spike/TASK.md", "requires": ["objective", "acceptance_criteria"] }
+        ],
+        "produces": [
+          { "type": "artifact", "path": "spike/workdir/pi-coding-spike/SPEC.md", "schema": "spec" },
+          { "type": "artifact", "path": "spike/workdir/pi-coding-spike/PLAN.md", "schema": "plan" },
+          { "type": "artifact", "path": "spike/workdir/pi-coding-spike/build/", "schema": "build-output" },
+          { "type": "artifact", "path": "spike/workdir/pi-coding-spike/VALIDATION.md", "schema": "validation" },
+          { "type": "handoff", "to": "pi-pm", "must_cite": ["playbook", "phase"] }
+        ],
+        "checkpoints": [
+          { "when": "after_plan_before_build", "policy": "AlwaysConfirm", "question": "Approve this PLAN to proceed to BUILD?" },
+          { "when": "risky_tool_write_or_deploy", "policy": "ConfirmRisky" }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "sabbk-forge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sabbk's agent-workshop bootstrap/execution layer — boots Pi agents on the earendil-works/pi runtime from a manifest, with shared memory (git handoffs) and stop-ask-resume human checkpoints.",
+  "type": "module",
+  "engines": { "node": ">=22.19.0" },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "0.78.0"
+  },
+  "bin": {
+    "pi": "node_modules/.bin/pi"
+  },
+  "scripts": {
+    "jigs": "bash jigs/run-all.sh",
+    "provision": "bash bin/provision-agent.sh",
+    "spike:dry": "bash bin/run-spike.sh --dry-run pi-coding-spike",
+    "spike:run": "bash bin/run-spike.sh --run pi-coding-spike",
+    "pi:version": "pi --version",
+    "pi:models": "pi --list-models"
+  },
+  "comment": "pi is pinned EXACT (no ^ or ~) on purpose — pi is a consumed dependency behind lib/pi-adapter.mjs, not something we patch. Bump deliberately and re-run the spike. pi's CONTRIBUTING auto-closes outside PRs, so fork only if a real need appears."
+}
