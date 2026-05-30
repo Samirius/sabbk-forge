@@ -43,7 +43,10 @@ cp -f "$ROOT/spike/TASK.md" "$WORKDIR/TASK.md"
 
 if [ "$MODE" = "--run" ]; then
   bash "$ROOT/bin/provision-agent.sh" "$ID"
+  bash "$ROOT/bin/budget.sh" reset "$ID" "$WORKDIR"
+  bash "$ROOT/bin/budget.sh" guard "$ID" "$WORKDIR" || exit 3
   echo "▶ STAGE 1 SPEC";  adapter spawn "$ID" spec "$M_SPEC"
+  bash "$ROOT/bin/budget.sh" guard "$ID" "$WORKDIR" || exit 3
   echo "▶ STAGE 2 PLAN";  adapter spawn "$ID" plan "$M_PLAN" --resume
   echo "⏸ STAGE 3 CHECKPOINT"; bash "$ROOT/bin/checkpoint.sh" request "$ID" "Approve this PLAN to proceed to BUILD?"
   echo "   (run stopped at the human gate — approve, then: bash bin/checkpoint.sh resume $ID)"
@@ -51,7 +54,9 @@ if [ "$MODE" = "--run" ]; then
 fi
 
 if [ "$MODE" = "--resume-build" ]; then
+  bash "$ROOT/bin/budget.sh" guard "$ID" "$WORKDIR" || exit 3
   echo "▶ STAGE 4 BUILD";    adapter spawn "$ID" build "$M_BUILD" --resume
+  bash "$ROOT/bin/budget.sh" guard "$ID" "$WORKDIR" || exit 3
   echo "▶ STAGE 5 VALIDATE"; adapter spawn "$ID" validate "$M_VALID" --resume
   echo "▶ STAGE 6 jigs";     bash "$ROOT/jigs/run-all.sh" || true
   echo "✅ spike pipeline complete for $ID. Review ./spike/workdir/$ID/VALIDATION.md."
