@@ -20,6 +20,7 @@ M_VALID="Verify ./build/ against ./SPEC.md acceptance criteria. Write ./VALIDATI
 
 pi_present() { [ -n "${PI_BIN:-}" ] || [ -x "$ROOT/node_modules/.bin/pi" ] || command -v pi >/dev/null 2>&1; }
 adapter() { node "$ROOT/lib/pi-adapter.mjs" "$@"; }
+logger() { node "$ROOT/lib/run-log.mjs" --pipeline spike --agent "$ID" "$1" "$2" "$3" "$4" 2>/dev/null || true; }
 
 if [ "$MODE" = "--dry-run" ]; then
   echo "🔎 DRY RUN for $ID — these are the exact pi invocations (no LLM called):"
@@ -47,9 +48,11 @@ if [ "$MODE" = "--run" ]; then
   bash "$ROOT/bin/provision-agent.sh" "$ID"
   bash "$ROOT/bin/budget.sh" reset "$ID" "$WORKDIR"
   bash "$ROOT/bin/budget.sh" guard "$ID" "$WORKDIR" || exit 3
-  echo "▶ STAGE 1 SPEC";  adapter spawn "$ID" spec "$M_SPEC"
+  logger --stage spec --start
+  echo "▶ STAGE 1 SPEC";  adapter spawn "$ID" spec "$M_SPEC"; logger --stage spec --end $?
   bash "$ROOT/bin/budget.sh" guard "$ID" "$WORKDIR" || exit 3
-  echo "▶ STAGE 2 PLAN";  adapter spawn "$ID" plan "$M_PLAN" --resume
+  logger --stage plan --start
+  echo "▶ STAGE 2 PLAN";  adapter spawn "$ID" plan "$M_PLAN" --resume; logger --stage plan --end $?
   echo "⏸ STAGE 3 CHECKPOINT"; bash "$ROOT/bin/checkpoint.sh" request "$ID" "Approve this PLAN to proceed to BUILD?"
   echo "   (run stopped at the human gate — approve, then: bash bin/checkpoint.sh resume $ID)"
   exit 0
@@ -57,9 +60,11 @@ fi
 
 if [ "$MODE" = "--resume-build" ]; then
   bash "$ROOT/bin/budget.sh" guard "$ID" "$WORKDIR" || exit 3
-  echo "▶ STAGE 4 BUILD ($BUILD_STAGE)";    adapter spawn "$ID" "$BUILD_STAGE" "$M_BUILD" --resume
+  logger --stage "${BUILD_STAGE}" --start
+  echo "▶ STAGE 4 BUILD ($BUILD_STAGE)";    adapter spawn "$ID" "$BUILD_STAGE" "$M_BUILD" --resume; logger --stage "${BUILD_STAGE}" --end $?
   bash "$ROOT/bin/budget.sh" guard "$ID" "$WORKDIR" || exit 3
-  echo "▶ STAGE 5 VALIDATE"; adapter spawn "$ID" validate "$M_VALID" --resume
+  logger --stage validate --start
+  echo "▶ STAGE 5 VALIDATE"; adapter spawn "$ID" validate "$M_VALID" --resume; logger --stage validate --end $?
   echo "▶ STAGE 6 jigs";     bash "$ROOT/jigs/run-all.sh" || true
   echo "✅ spike pipeline complete for $ID. Review ./spike/workdir/$ID/VALIDATION.md."
   exit 0
