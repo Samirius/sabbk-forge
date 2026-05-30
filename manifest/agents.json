@@ -16,10 +16,10 @@
         "_note": "VERIFIED present in pi 0.78.0 via `pi --list-models haiku` (anthropic, 200K ctx, thinking). The adapter passes --model verbatim; this is the only place the id lives."
       },
       "tools": {
-        "spec": ["read", "grep", "ls"],
-        "plan": ["read", "grep", "ls"],
+        "spec": ["read", "grep", "ls", "write"],
+        "plan": ["read", "grep", "ls", "write"],
         "build": ["read", "bash", "edit", "write"],
-        "validate": ["read", "bash", "grep", "ls"]
+        "validate": ["read", "bash", "grep", "ls", "write"]
       },
       "playbook": "sabbk-workshop/playbooks/software/PLAYBOOK.md",
       "boundaries": [
