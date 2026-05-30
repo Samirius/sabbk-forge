@@ -13,8 +13,9 @@ the ideal proof that one Pi Coding Agent can go spec → plan → build → vali
 2. Running it against a directory with a trailing-whitespace violation exits nonzero and prints the
    offending `file:line`.
 3. Running it against a clean directory exits 0 and prints a success line.
-4. It uses only POSIX/bash + standard tools (grep/sed/find) — no npm, no external installs.
-5. `./VALIDATION.md` shows each criterion with pass/fail and the evidence (the actual command output).
+4. It uses only POSIX/bash + standard tools (grep/sed/git) — no npm, no external installs.
+5. It MUST enumerate candidate files with `git ls-files` (tracked files only) — NOT `find`. The Validate stage greps the script to confirm `git ls-files` is used.
+6. `./VALIDATION.md` shows each criterion with pass/fail and the evidence (the actual command output).
 
 **boundaries:** write only inside `spike/workdir/pi-coding-spike/`. Do not modify `sabbk-workshop` or any
 other repo — a human will PR the jig there later.

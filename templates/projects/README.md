@@ -14,5 +14,7 @@ Each `AGENTS.md` is the stack's hard build rules (how to install, build, test, a
 the agent's Validate stage has an unambiguous target. The Astro template mirrors the real Banafah portal
 stack (Astro static site) so client-adjacent technical work starts from a familiar shape.
 
-These are **starters**, not forged Sabbk product — adapt per project. Per-stack build jigs
-(`build-passes`, `types-pass`) are a P2 follow-up that will plug into each template's `AGENTS.md`.
+These are **starters**, not forged Sabbk product — adapt per project. The per-stack "is it green?" check
+is `jigs/stack-build.sh <project-dir>` — it auto-detects the stack and runs build/typecheck/test; the
+Validate stage runs it inside the build output. On memory-constrained VMs, run the BUILD stage write-only
+with `--lite` (see `TROUBLESHOOTING.md`).
