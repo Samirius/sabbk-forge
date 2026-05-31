@@ -3,123 +3,795 @@
   "_comment": "Agent Roster Manifest — single source of truth. All agents run via the one `pi` CLI, differentiated by kind/tools/stages. Models: haiku here keeps demos cheap; PRODUCTION swaps managers to a smart (Sonnet/Opus-class) id from `pi --list-models` and keeps grunt stages cheap. Manager pattern (D21): each domain agent is manager-only now; specialist sub-agents are added when a single agent gets overloaded.",
   "agents": [
     {
-      "id": "pi-pm", "name": "Conductor", "tier": 2, "kind": "orchestrator",
+      "id": "pi-pm",
+      "name": "Conductor",
+      "tier": 2,
+      "kind": "orchestrator",
       "role": "Pi PM (manager-only): take a work request, assign it to the right gear with a Sabbk-compliant handoff, run human checkpoints, and aggregate reporting.",
-      "runtime": { "harness": "pi-agent-core", "pinned_version": "0.78.0" },
-      "model": { "provider": "anthropic", "id": "claude-sonnet-4-5", "thinking": "medium" },
-      "tools": { "assign": ["read", "write", "ls"], "report": ["read", "write", "grep", "ls"] },
+      "runtime": {
+        "harness": "pi-agent-core",
+        "pinned_version": "0.78.0"
+      },
+      "model": {
+        "provider": "glm",
+        "id": "glm-5.1",
+        "thinking": "medium"
+      },
+      "tools": {
+        "assign": [
+          "read",
+          "write",
+          "ls"
+        ],
+        "report": [
+          "read",
+          "write",
+          "grep",
+          "ls"
+        ]
+      },
       "playbook": "sabbk-workshop/playbooks/pm/PLAYBOOK.md",
-      "boundaries": ["never read shared/personal/ or any restricted/ folder", "no client or Banafah work of any kind", "AI branches end in -ai; pull before push; never force-push", "credentials come only from the environment; never print or commit a secret"],
-      "budget": { "max_turns": 4, "max_usd": 0.25, "timeout_sec": 120 },
+      "boundaries": [
+        "never read shared/personal/ or any restricted/ folder",
+        "no client or Banafah work of any kind",
+        "AI branches end in -ai; pull before push; never force-push",
+        "credentials come only from the environment; never print or commit a secret"
+      ],
+      "budget": {
+        "max_turns": 4,
+        "max_usd": 0.25,
+        "timeout_sec": 120
+      },
       "gear": {
-        "consumes": [{ "type": "request", "path": "pipeline/REQUEST.md", "requires": ["objective"] }],
-        "produces": [{ "type": "handoff", "to": "pi-coding-spike", "path": "spike/workdir/pi-coding-spike/INBOX-handoff.md", "schema": "handoff", "must_cite": ["playbook", "phase"] }, { "type": "handoff", "to": "pi-software", "path": "spike/workdir/pi-software/INBOX-handoff.md", "schema": "handoff", "must_cite": ["playbook", "phase"] }],
-        "checkpoints": [{ "when": "after_assignment_before_dispatch", "policy": "AlwaysConfirm", "question": "Approve PM's assignment + dispatch to the coding gear?" }]
+        "consumes": [
+          {
+            "type": "request",
+            "path": "pipeline/REQUEST.md",
+            "requires": [
+              "objective"
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "type": "handoff",
+            "to": "pi-coding-spike",
+            "path": "spike/workdir/pi-coding-spike/INBOX-handoff.md",
+            "schema": "handoff",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          },
+          {
+            "type": "handoff",
+            "to": "pi-software",
+            "path": "spike/workdir/pi-software/INBOX-handoff.md",
+            "schema": "handoff",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          }
+        ],
+        "checkpoints": [
+          {
+            "when": "after_assignment_before_dispatch",
+            "policy": "AlwaysConfirm",
+            "question": "Approve PM's assignment + dispatch to the coding gear?"
+          }
+        ]
       }
     },
     {
-      "id": "pi-sales", "name": "Closer", "tier": 2, "kind": "domain",
+      "id": "pi-sales",
+      "name": "Closer",
+      "tier": 2,
+      "kind": "domain",
       "role": "Pi Sales (manager-only): qualify a lead, write a proposal/contract, and hand a won engagement to Pi PM.",
-      "runtime": { "harness": "pi-agent-core", "pinned_version": "0.78.0" },
-      "model": { "provider": "anthropic", "id": "claude-sonnet-4-5", "thinking": "medium" },
-      "tools": { "discover": ["read", "write", "grep", "ls"], "propose": ["read", "write", "ls"] },
+      "runtime": {
+        "harness": "pi-agent-core",
+        "pinned_version": "0.78.0"
+      },
+      "model": {
+        "provider": "glm",
+        "id": "glm-5.1",
+        "thinking": "medium"
+      },
+      "tools": {
+        "discover": [
+          "read",
+          "write",
+          "grep",
+          "ls"
+        ],
+        "propose": [
+          "read",
+          "write",
+          "ls"
+        ]
+      },
       "playbook": "sabbk-workshop/playbooks/sales/PLAYBOOK.md",
-      "boundaries": ["never read shared/personal/ or any restricted/ folder", "AI branches end in -ai; pull before push; never force-push", "credentials come only from the environment; never print or commit a secret"],
-      "budget": { "max_turns": 6, "max_usd": 0.40, "timeout_sec": 180 },
+      "boundaries": [
+        "never read shared/personal/ or any restricted/ folder",
+        "AI branches end in -ai; pull before push; never force-push",
+        "credentials come only from the environment; never print or commit a secret"
+      ],
+      "budget": {
+        "max_turns": 6,
+        "max_usd": 0.4,
+        "timeout_sec": 180
+      },
       "gear": {
-        "consumes": [{ "type": "request", "from": "human", "requires": ["prospect", "objective"] }],
-        "produces": [{ "type": "artifact", "path": "sabbk-clients/<client>/agreements/proposal.md", "schema": "proposal" }, { "type": "handoff", "to": "pi-pm", "must_cite": ["playbook", "phase"] }],
-        "checkpoints": [{ "when": "before_sending_proposal", "policy": "AlwaysConfirm", "question": "Approve this proposal before it goes to the client?" }]
+        "consumes": [
+          {
+            "type": "request",
+            "from": "human",
+            "requires": [
+              "prospect",
+              "objective"
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "type": "artifact",
+            "path": "sabbk-clients/<client>/agreements/proposal.md",
+            "schema": "proposal"
+          },
+          {
+            "type": "handoff",
+            "to": "pi-pm",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          }
+        ],
+        "checkpoints": [
+          {
+            "when": "before_sending_proposal",
+            "policy": "AlwaysConfirm",
+            "question": "Approve this proposal before it goes to the client?"
+          }
+        ]
       }
     },
     {
-      "id": "pi-brand", "name": "Wolff", "tier": 2, "kind": "domain",
+      "id": "pi-brand",
+      "name": "Wolff",
+      "tier": 2,
+      "kind": "domain",
       "role": "Pi Brand (manager-only, APPRENTICE playbook): define brand voice, offer framework, and visual-system spec.",
-      "runtime": { "harness": "pi-agent-core", "pinned_version": "0.78.0" },
-      "model": { "provider": "anthropic", "id": "claude-sonnet-4-5", "thinking": "medium" },
-      "tools": { "audit": ["read", "write", "grep", "ls"], "voice": ["read", "write", "ls"] },
+      "runtime": {
+        "harness": "pi-agent-core",
+        "pinned_version": "0.78.0"
+      },
+      "model": {
+        "provider": "glm",
+        "id": "glm-5.1",
+        "thinking": "medium"
+      },
+      "tools": {
+        "audit": [
+          "read",
+          "write",
+          "grep",
+          "ls"
+        ],
+        "voice": [
+          "read",
+          "write",
+          "ls"
+        ]
+      },
       "playbook": "sabbk-workshop/playbooks/brand/PLAYBOOK.md",
-      "boundaries": ["never read shared/personal/ or any restricted/ folder", "no edits to other agents' workspaces", "AI branches end in -ai; pull before push; never force-push", "credentials come only from the environment; never print or commit a secret"],
-      "budget": { "max_turns": 6, "max_usd": 0.40, "timeout_sec": 180 },
+      "boundaries": [
+        "never read shared/personal/ or any restricted/ folder",
+        "no edits to other agents' workspaces",
+        "AI branches end in -ai; pull before push; never force-push",
+        "credentials come only from the environment; never print or commit a secret"
+      ],
+      "budget": {
+        "max_turns": 6,
+        "max_usd": 0.4,
+        "timeout_sec": 180
+      },
       "gear": {
-        "consumes": [{ "type": "handoff", "from": "pi-pm", "requires": ["client", "objective"] }],
-        "produces": [{ "type": "artifact", "path": "sabbk-clients/<client>/brand/voice.md", "schema": "brand-voice" }, { "type": "handoff", "to": "pi-marketing", "must_cite": ["playbook", "phase"] }, { "type": "handoff", "to": "pi-design", "must_cite": ["playbook", "phase"] }],
-        "checkpoints": [{ "when": "before_client_facing_change", "policy": "AlwaysConfirm", "question": "Approve the brand voice/offer direction?" }]
+        "consumes": [
+          {
+            "type": "handoff",
+            "from": "pi-pm",
+            "requires": [
+              "client",
+              "objective"
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "type": "artifact",
+            "path": "sabbk-clients/<client>/brand/voice.md",
+            "schema": "brand-voice"
+          },
+          {
+            "type": "handoff",
+            "to": "pi-marketing",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          },
+          {
+            "type": "handoff",
+            "to": "pi-design",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          }
+        ],
+        "checkpoints": [
+          {
+            "when": "before_client_facing_change",
+            "policy": "AlwaysConfirm",
+            "question": "Approve the brand voice/offer direction?"
+          }
+        ]
       }
     },
     {
-      "id": "pi-marketing", "name": "Ogilvy", "tier": 2, "kind": "domain",
+      "id": "pi-marketing",
+      "name": "Ogilvy",
+      "tier": 2,
+      "kind": "domain",
       "role": "Pi Marketing (manager-only, MASTER playbook): demand-gen strategy, content calendar, creative briefs, media plan, retention, reporting. Migrated from agent-brain/agents/cmo (Ogilvy) onto pi.",
-      "runtime": { "harness": "pi-agent-core", "pinned_version": "0.78.0" },
-      "model": { "provider": "anthropic", "id": "claude-sonnet-4-5", "thinking": "medium" },
-      "tools": { "strategy": ["read", "write", "grep", "ls"], "brief": ["read", "write", "ls"], "report": ["read", "write", "grep", "ls"] },
+      "runtime": {
+        "harness": "pi-agent-core",
+        "pinned_version": "0.78.0"
+      },
+      "model": {
+        "provider": "glm",
+        "id": "glm-5.1",
+        "thinking": "medium"
+      },
+      "tools": {
+        "strategy": [
+          "read",
+          "write",
+          "grep",
+          "ls"
+        ],
+        "brief": [
+          "read",
+          "write",
+          "ls"
+        ],
+        "report": [
+          "read",
+          "write",
+          "grep",
+          "ls"
+        ]
+      },
       "playbook": "sabbk-workshop/playbooks/marketing/PLAYBOOK.md",
-      "boundaries": ["never read shared/personal/ or any restricted/ folder", "draft+propose client deliverables before committing unless told otherwise", "AI branches end in -ai; pull before push; never force-push", "credentials come only from the environment; never print or commit a secret"],
-      "budget": { "max_turns": 8, "max_usd": 0.60, "timeout_sec": 240 },
+      "boundaries": [
+        "never read shared/personal/ or any restricted/ folder",
+        "draft+propose client deliverables before committing unless told otherwise",
+        "AI branches end in -ai; pull before push; never force-push",
+        "credentials come only from the environment; never print or commit a secret"
+      ],
+      "budget": {
+        "max_turns": 8,
+        "max_usd": 0.6,
+        "timeout_sec": 240
+      },
       "gear": {
-        "consumes": [{ "type": "handoff", "from": "pi-pm", "requires": ["client", "objective", "kpis"] }, { "type": "handoff", "from": "pi-brand", "requires": ["voice"] }],
-        "produces": [{ "type": "artifact", "path": "sabbk-clients/<client>/strategy/marketing.md", "schema": "strategy" }, { "type": "handoff", "to": "pi-design", "must_cite": ["playbook", "phase"] }, { "type": "handoff", "to": "pi-software", "must_cite": ["playbook", "phase"] }, { "type": "handoff", "to": "pi-pm", "must_cite": ["playbook", "phase"] }],
-        "checkpoints": [{ "when": "before_client_facing_change", "policy": "AlwaysConfirm", "question": "Approve this marketing strategy/creative before it ships?" }, { "when": "before_ad_spend", "policy": "AlwaysConfirm", "question": "Approve launching paid spend?" }]
+        "consumes": [
+          {
+            "type": "handoff",
+            "from": "pi-pm",
+            "requires": [
+              "client",
+              "objective",
+              "kpis"
+            ]
+          },
+          {
+            "type": "handoff",
+            "from": "pi-brand",
+            "requires": [
+              "voice"
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "type": "artifact",
+            "path": "sabbk-clients/<client>/strategy/marketing.md",
+            "schema": "strategy"
+          },
+          {
+            "type": "handoff",
+            "to": "pi-design",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          },
+          {
+            "type": "handoff",
+            "to": "pi-software",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          },
+          {
+            "type": "handoff",
+            "to": "pi-pm",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          }
+        ],
+        "checkpoints": [
+          {
+            "when": "before_client_facing_change",
+            "policy": "AlwaysConfirm",
+            "question": "Approve this marketing strategy/creative before it ships?"
+          },
+          {
+            "when": "before_ad_spend",
+            "policy": "AlwaysConfirm",
+            "question": "Approve launching paid spend?"
+          }
+        ]
       }
     },
     {
-      "id": "pi-cro", "name": "Optimizer", "tier": 2, "kind": "domain",
+      "id": "pi-cro",
+      "name": "Optimizer",
+      "tier": 2,
+      "kind": "domain",
       "role": "Pi CRO (manager-only, APPRENTICE playbook): conversion audit + A/B test plans; hands implementation to Pi Software and UX changes to Pi Design.",
-      "runtime": { "harness": "pi-agent-core", "pinned_version": "0.78.0" },
-      "model": { "provider": "anthropic", "id": "claude-sonnet-4-5", "thinking": "medium" },
-      "tools": { "audit": ["read", "write", "grep", "ls"], "testplan": ["read", "write", "ls"] },
+      "runtime": {
+        "harness": "pi-agent-core",
+        "pinned_version": "0.78.0"
+      },
+      "model": {
+        "provider": "glm",
+        "id": "glm-5.1",
+        "thinking": "medium"
+      },
+      "tools": {
+        "audit": [
+          "read",
+          "write",
+          "grep",
+          "ls"
+        ],
+        "testplan": [
+          "read",
+          "write",
+          "ls"
+        ]
+      },
       "playbook": "sabbk-workshop/playbooks/cro/PLAYBOOK.md",
-      "boundaries": ["never read shared/personal/ or any restricted/ folder", "no edits to other agents' workspaces", "AI branches end in -ai; pull before push; never force-push", "credentials come only from the environment; never print or commit a secret"],
-      "budget": { "max_turns": 6, "max_usd": 0.40, "timeout_sec": 180 },
+      "boundaries": [
+        "never read shared/personal/ or any restricted/ folder",
+        "no edits to other agents' workspaces",
+        "AI branches end in -ai; pull before push; never force-push",
+        "credentials come only from the environment; never print or commit a secret"
+      ],
+      "budget": {
+        "max_turns": 6,
+        "max_usd": 0.4,
+        "timeout_sec": 180
+      },
       "gear": {
-        "consumes": [{ "type": "handoff", "from": "pi-pm", "requires": ["client", "objective"] }],
-        "produces": [{ "type": "artifact", "path": "sabbk-clients/<client>/cro/audit.md", "schema": "cro-audit" }, { "type": "handoff", "to": "pi-software", "must_cite": ["playbook", "phase"] }, { "type": "handoff", "to": "pi-design", "must_cite": ["playbook", "phase"] }],
-        "checkpoints": [{ "when": "before_client_facing_change", "policy": "AlwaysConfirm", "question": "Approve the CRO test plan?" }, { "when": "risky_tool_write_or_deploy", "policy": "ConfirmRisky" }]
+        "consumes": [
+          {
+            "type": "handoff",
+            "from": "pi-pm",
+            "requires": [
+              "client",
+              "objective"
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "type": "artifact",
+            "path": "sabbk-clients/<client>/cro/audit.md",
+            "schema": "cro-audit"
+          },
+          {
+            "type": "handoff",
+            "to": "pi-software",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          },
+          {
+            "type": "handoff",
+            "to": "pi-design",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          }
+        ],
+        "checkpoints": [
+          {
+            "when": "before_client_facing_change",
+            "policy": "AlwaysConfirm",
+            "question": "Approve the CRO test plan?"
+          },
+          {
+            "when": "risky_tool_write_or_deploy",
+            "policy": "ConfirmRisky"
+          }
+        ]
       }
     },
     {
-      "id": "pi-design", "name": "Rams", "tier": 2, "kind": "domain",
+      "id": "pi-design",
+      "name": "Rams",
+      "tier": 2,
+      "kind": "domain",
       "role": "Pi Design (manager-only): UX/UI + ad creative; consumes briefs from Marketing/CRO/Brand, produces a dev handoff to Pi Software.",
-      "runtime": { "harness": "pi-agent-core", "pinned_version": "0.78.0" },
-      "model": { "provider": "anthropic", "id": "claude-sonnet-4-5", "thinking": "medium" },
-      "tools": { "intake": ["read", "write", "grep", "ls"], "design": ["read", "write", "ls"] },
+      "runtime": {
+        "harness": "pi-agent-core",
+        "pinned_version": "0.78.0"
+      },
+      "model": {
+        "provider": "glm",
+        "id": "glm-5.1",
+        "thinking": "medium"
+      },
+      "tools": {
+        "intake": [
+          "read",
+          "write",
+          "grep",
+          "ls"
+        ],
+        "design": [
+          "read",
+          "write",
+          "ls"
+        ]
+      },
       "playbook": "sabbk-workshop/playbooks/design/PLAYBOOK.md",
-      "boundaries": ["never read shared/personal/ or any restricted/ folder", "no edits to other agents' workspaces", "AI branches end in -ai; pull before push; never force-push", "credentials come only from the environment; never print or commit a secret"],
-      "budget": { "max_turns": 6, "max_usd": 0.40, "timeout_sec": 180 },
+      "boundaries": [
+        "never read shared/personal/ or any restricted/ folder",
+        "no edits to other agents' workspaces",
+        "AI branches end in -ai; pull before push; never force-push",
+        "credentials come only from the environment; never print or commit a secret"
+      ],
+      "budget": {
+        "max_turns": 6,
+        "max_usd": 0.4,
+        "timeout_sec": 180
+      },
       "gear": {
-        "consumes": [{ "type": "handoff", "from": "pi-marketing", "requires": ["brief"] }, { "type": "handoff", "from": "pi-cro" }, { "type": "handoff", "from": "pi-brand" }],
-        "produces": [{ "type": "artifact", "path": "sabbk-clients/<client>/design/", "schema": "design-package" }, { "type": "handoff", "to": "pi-software", "must_cite": ["playbook", "phase"] }],
-        "checkpoints": [{ "when": "before_client_facing_change", "policy": "AlwaysConfirm", "question": "Approve the design before dev handoff?" }]
+        "consumes": [
+          {
+            "type": "handoff",
+            "from": "pi-marketing",
+            "requires": [
+              "brief"
+            ]
+          },
+          {
+            "type": "handoff",
+            "from": "pi-cro"
+          },
+          {
+            "type": "handoff",
+            "from": "pi-brand"
+          }
+        ],
+        "produces": [
+          {
+            "type": "artifact",
+            "path": "sabbk-clients/<client>/design/",
+            "schema": "design-package"
+          },
+          {
+            "type": "handoff",
+            "to": "pi-software",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          }
+        ],
+        "checkpoints": [
+          {
+            "when": "before_client_facing_change",
+            "policy": "AlwaysConfirm",
+            "question": "Approve the design before dev handoff?"
+          }
+        ]
       }
     },
     {
-      "id": "pi-software", "name": "Builder", "tier": 2, "kind": "coding",
+      "id": "pi-software",
+      "name": "Builder",
+      "tier": 2,
+      "kind": "coding",
       "role": "Pi Software (production coding manager, MASTER playbook): spec -> plan -> build -> validate for technical work (tracking, site, infra). pi-coding-spike is its proven demo instance.",
-      "runtime": { "harness": "pi-coding-agent", "pinned_version": "0.78.0" },
-      "model": { "provider": "anthropic", "id": "claude-sonnet-4-5", "thinking": "medium", "stages": { "build": { "id": "claude-haiku-4-5", "thinking": "low" }, "build_lite": { "id": "claude-haiku-4-5", "thinking": "low" }, "validate": { "id": "claude-haiku-4-5", "thinking": "low" }, "validate_lite": { "id": "claude-haiku-4-5", "thinking": "low" } }, "_note": "Smart (sonnet) for spec/plan judgment; cheap (haiku) for build/validate grunt — per-stage cost tiering via the adapter." },
-      "tools": { "spec": ["read", "grep", "ls", "write"], "plan": ["read", "grep", "ls", "write"], "build": ["read", "bash", "edit", "write"], "build_lite": ["read", "edit", "write"], "validate": ["read", "bash", "grep", "ls", "write"], "validate_lite": ["read", "grep", "ls", "write"] },
+      "runtime": {
+        "harness": "pi-coding-agent",
+        "pinned_version": "0.78.0"
+      },
+      "model": {
+        "provider": "glm",
+        "id": "glm-5.1",
+        "thinking": "medium",
+        "stages": {
+          "build": {
+            "id": "glm-5.1",
+            "thinking": "low",
+            "provider": "glm"
+          },
+          "build_lite": {
+            "id": "glm-5.1",
+            "thinking": "low",
+            "provider": "glm"
+          },
+          "validate": {
+            "id": "glm-5.1",
+            "thinking": "low",
+            "provider": "glm"
+          },
+          "validate_lite": {
+            "id": "glm-5.1",
+            "thinking": "low",
+            "provider": "glm"
+          }
+        },
+        "_note": "Smart (sonnet) for spec/plan judgment; cheap (haiku) for build/validate grunt — per-stage cost tiering via the adapter."
+      },
+      "tools": {
+        "spec": [
+          "read",
+          "grep",
+          "ls",
+          "write"
+        ],
+        "plan": [
+          "read",
+          "grep",
+          "ls",
+          "write"
+        ],
+        "build": [
+          "read",
+          "bash",
+          "edit",
+          "write"
+        ],
+        "build_lite": [
+          "read",
+          "edit",
+          "write"
+        ],
+        "validate": [
+          "read",
+          "bash",
+          "grep",
+          "ls",
+          "write"
+        ],
+        "validate_lite": [
+          "read",
+          "grep",
+          "ls",
+          "write"
+        ]
+      },
       "playbook": "sabbk-workshop/playbooks/software/PLAYBOOK.md",
-      "boundaries": ["never read shared/personal/ or any restricted/ folder", "work only on the branch/paths in the assignment handoff", "every change ships with a SPEC (acceptance criteria) + a VALIDATION (evidence per criterion)", "jigs/tests must pass before handing back; keep diffs small and reviewable", "enumerate tracked files with git ls-files, never find", "cite Playbook + Phase (software/PLAYBOOK.md) in the return handoff", "AI branches end in -ai; pull before push; never force-push", "credentials come only from the environment; never print or commit a secret"],
-      "budget": { "max_turns": 10, "max_usd": 0.80, "timeout_sec": 300 },
+      "boundaries": [
+        "never read shared/personal/ or any restricted/ folder",
+        "work only on the branch/paths in the assignment handoff",
+        "every change ships with a SPEC (acceptance criteria) + a VALIDATION (evidence per criterion)",
+        "jigs/tests must pass before handing back; keep diffs small and reviewable",
+        "enumerate tracked files with git ls-files, never find",
+        "cite Playbook + Phase (software/PLAYBOOK.md) in the return handoff",
+        "AI branches end in -ai; pull before push; never force-push",
+        "credentials come only from the environment; never print or commit a secret"
+      ],
+      "budget": {
+        "max_turns": 10,
+        "max_usd": 0.8,
+        "timeout_sec": 300
+      },
       "gear": {
-        "consumes": [{ "type": "handoff", "from": "pi-cro" }, { "type": "handoff", "from": "pi-marketing" }, { "type": "handoff", "from": "pi-design" }, { "type": "handoff", "from": "pi-pm" }],
-        "produces": [{ "type": "artifact", "path": "sabbk-clients/<client>/build/", "schema": "build-output" }, { "type": "artifact", "path": "sabbk-clients/<client>/build/VALIDATION.md", "schema": "validation" }, { "type": "handoff", "to": "pi-pm", "must_cite": ["playbook", "phase"] }],
-        "checkpoints": [{ "when": "after_plan_before_build", "policy": "AlwaysConfirm", "question": "Approve this PLAN to proceed to BUILD?" }, { "when": "risky_tool_write_or_deploy", "policy": "ConfirmRisky" }]
+        "consumes": [
+          {
+            "type": "handoff",
+            "from": "pi-cro"
+          },
+          {
+            "type": "handoff",
+            "from": "pi-marketing"
+          },
+          {
+            "type": "handoff",
+            "from": "pi-design"
+          },
+          {
+            "type": "handoff",
+            "from": "pi-pm"
+          }
+        ],
+        "produces": [
+          {
+            "type": "artifact",
+            "path": "sabbk-clients/<client>/build/",
+            "schema": "build-output"
+          },
+          {
+            "type": "artifact",
+            "path": "sabbk-clients/<client>/build/VALIDATION.md",
+            "schema": "validation"
+          },
+          {
+            "type": "handoff",
+            "to": "pi-pm",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          }
+        ],
+        "checkpoints": [
+          {
+            "when": "after_plan_before_build",
+            "policy": "AlwaysConfirm",
+            "question": "Approve this PLAN to proceed to BUILD?"
+          },
+          {
+            "when": "risky_tool_write_or_deploy",
+            "policy": "ConfirmRisky"
+          }
+        ]
       }
     },
     {
-      "id": "pi-coding-spike", "name": "Spike", "tier": 2, "kind": "coding",
+      "id": "pi-coding-spike",
+      "name": "Spike",
+      "tier": 2,
+      "kind": "coding",
       "role": "Pi Coding Agent (spike/demo instance): one internal forge task, spec -> plan -> build -> validate, with one human checkpoint. Live-proven on GLM-4.6.",
-      "runtime": { "harness": "pi-coding-agent", "pinned_version": "0.78.0" },
-      "model": { "provider": "anthropic", "id": "claude-haiku-4-5", "thinking": "low", "_note": "VERIFIED via `pi --list-models haiku`. Live-proven on GLM-4.6 (8/8 ACs, ~$0.0017/run)." },
-      "tools": { "spec": ["read", "grep", "ls", "write"], "plan": ["read", "grep", "ls", "write"], "build": ["read", "bash", "edit", "write"], "build_lite": ["read", "edit", "write"], "validate": ["read", "bash", "grep", "ls", "write"], "validate_lite": ["read", "grep", "ls", "write"] },
+      "runtime": {
+        "harness": "pi-coding-agent",
+        "pinned_version": "0.78.0"
+      },
+      "model": {
+        "provider": "glm",
+        "id": "glm-5.1",
+        "thinking": "low",
+        "_note": "VERIFIED via `pi --list-models haiku`. Live-proven on GLM-4.6 (8/8 ACs, ~$0.0017/run)."
+      },
+      "tools": {
+        "spec": [
+          "read",
+          "grep",
+          "ls",
+          "write"
+        ],
+        "plan": [
+          "read",
+          "grep",
+          "ls",
+          "write"
+        ],
+        "build": [
+          "read",
+          "bash",
+          "edit",
+          "write"
+        ],
+        "build_lite": [
+          "read",
+          "edit",
+          "write"
+        ],
+        "validate": [
+          "read",
+          "bash",
+          "grep",
+          "ls",
+          "write"
+        ],
+        "validate_lite": [
+          "read",
+          "grep",
+          "ls",
+          "write"
+        ]
+      },
       "playbook": "sabbk-workshop/playbooks/software/PLAYBOOK.md",
-      "boundaries": ["never touch other agents' workspaces", "never read shared/personal/ or any restricted/ folder", "no client or Banafah work of any kind", "AI branches end in -ai; pull before push; never force-push", "credentials come only from the environment; never print or commit a secret", "write only inside spike/workdir/pi-coding-spike/; do not modify other repos"],
-      "budget": { "max_turns": 8, "max_usd": 0.50, "timeout_sec": 240 },
+      "boundaries": [
+        "never touch other agents' workspaces",
+        "never read shared/personal/ or any restricted/ folder",
+        "no client or Banafah work of any kind",
+        "AI branches end in -ai; pull before push; never force-push",
+        "credentials come only from the environment; never print or commit a secret",
+        "write only inside spike/workdir/pi-coding-spike/; do not modify other repos"
+      ],
+      "budget": {
+        "max_turns": 8,
+        "max_usd": 0.5,
+        "timeout_sec": 240
+      },
       "gear": {
-        "consumes": [{ "type": "handoff", "from": "pi-pm", "path": "spike/workdir/pi-coding-spike/INBOX-handoff.md", "requires": ["playbook", "phase"] }, { "type": "task", "path": "spike/TASK.md", "requires": ["objective", "acceptance_criteria"] }],
-        "produces": [{ "type": "artifact", "path": "spike/workdir/pi-coding-spike/SPEC.md", "schema": "spec" }, { "type": "artifact", "path": "spike/workdir/pi-coding-spike/PLAN.md", "schema": "plan" }, { "type": "artifact", "path": "spike/workdir/pi-coding-spike/build/", "schema": "build-output" }, { "type": "artifact", "path": "spike/workdir/pi-coding-spike/VALIDATION.md", "schema": "validation" }, { "type": "handoff", "to": "pi-pm", "must_cite": ["playbook", "phase"] }],
-        "checkpoints": [{ "when": "after_plan_before_build", "policy": "AlwaysConfirm", "question": "Approve this PLAN to proceed to BUILD?" }, { "when": "risky_tool_write_or_deploy", "policy": "ConfirmRisky" }]
+        "consumes": [
+          {
+            "type": "handoff",
+            "from": "pi-pm",
+            "path": "spike/workdir/pi-coding-spike/INBOX-handoff.md",
+            "requires": [
+              "playbook",
+              "phase"
+            ]
+          },
+          {
+            "type": "task",
+            "path": "spike/TASK.md",
+            "requires": [
+              "objective",
+              "acceptance_criteria"
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "type": "artifact",
+            "path": "spike/workdir/pi-coding-spike/SPEC.md",
+            "schema": "spec"
+          },
+          {
+            "type": "artifact",
+            "path": "spike/workdir/pi-coding-spike/PLAN.md",
+            "schema": "plan"
+          },
+          {
+            "type": "artifact",
+            "path": "spike/workdir/pi-coding-spike/build/",
+            "schema": "build-output"
+          },
+          {
+            "type": "artifact",
+            "path": "spike/workdir/pi-coding-spike/VALIDATION.md",
+            "schema": "validation"
+          },
+          {
+            "type": "handoff",
+            "to": "pi-pm",
+            "must_cite": [
+              "playbook",
+              "phase"
+            ]
+          }
+        ],
+        "checkpoints": [
+          {
+            "when": "after_plan_before_build",
+            "policy": "AlwaysConfirm",
+            "question": "Approve this PLAN to proceed to BUILD?"
+          },
+          {
+            "when": "risky_tool_write_or_deploy",
+            "policy": "ConfirmRisky"
+          }
+        ]
       }
     }
   ]

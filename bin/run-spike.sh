@@ -23,7 +23,7 @@ M_VALID="Verify ./build/ against ./SPEC.md acceptance criteria. Write ./VALIDATI
 
 pi_present() { [ -n "${PI_BIN:-}" ] || [ -x "$ROOT/node_modules/.bin/pi" ] || command -v pi >/dev/null 2>&1; }
 adapter() { node "$ROOT/lib/pi-adapter.mjs" "$@"; }
-logger() { node "$ROOT/lib/run-log.mjs" --pipeline spike --agent "$ID" "$1" "$2" "$3" "$4" 2>/dev/null || true; }
+logger() { node "$ROOT/lib/run-log.mjs" --pipeline spike --agent "$ID" ${1:+"$1"} ${2:+"$2"} ${3:+"$3"} ${4:+"$4"} 2>/dev/null || true; }
 
 if [ "$MODE" = "--dry-run" ]; then
   echo "🔎 DRY RUN for $ID — these are the exact pi invocations (no LLM called):"
