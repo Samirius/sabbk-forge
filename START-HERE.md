@@ -61,3 +61,18 @@ To add a real Pi agent (Pi PM, Pi Marketing, Pi CRO, …), copy an entry in `man
 
 **If you get stuck:** every script prints its own usage when run with no arguments. The only file that
 knows pi's command-line is `lib/pi-adapter.mjs` — if pi changes, that is the one file to edit.
+
+---
+
+### Eval Stage (automatic)
+Every pipeline run ends with **STAGE 7: AUTO-EVAL** — a quality gate that runs automatically:
+- **Tier 1+2** (free, instant): file structure, AC coverage, boundary compliance
+- **Tier 3** (LLM judge, ~$0.01): quality scoring when `GLM_API_KEY` is set
+- Results go to `evals/results/<agent>/<timestamp>/score.json`
+- The pipeline does NOT fail on eval failures (advisory), but logs them for tracking
+
+To run evals manually:
+```bash
+node evals/bin/score.mjs <taskId> <resultDir> --no-judge   # free, instant
+node evals/bin/score.mjs <taskId> <resultDir> --judge       # ~$0.01 with LLM
+```

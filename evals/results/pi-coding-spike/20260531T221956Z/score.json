@@ -1,0 +1,172 @@
+{
+  "taskId": "001-trailing-whitespace",
+  "timestamp": "2026-05-31T22:20:52.102Z",
+  "model": "glm-5.1",
+  "total": 29,
+  "pass": 29,
+  "fail": 0,
+  "passRate": 100,
+  "tier1": {
+    "pass": 15,
+    "total": 15
+  },
+  "tier2": {
+    "pass": 6,
+    "total": 6
+  },
+  "tier3": {
+    "pass": 6,
+    "total": 6
+  },
+  "tier4": {
+    "pass": 2,
+    "total": 2
+  },
+  "details": [
+    {
+      "label": "SPEC.md exists",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "label": "PLAN.md exists",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "label": "VALIDATION.md exists",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "label": "build/ directory has files",
+      "status": "PASS",
+      "details": "1 file(s)"
+    },
+    {
+      "label": "SPEC has acceptance criteria section",
+      "status": "PASS",
+      "details": "Looks for 'acceptance criteria' or 'AC-N' patterns"
+    },
+    {
+      "label": "SPEC has objective/task statement",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "label": "SPEC is substantive (>20 lines)",
+      "status": "PASS",
+      "details": "96 lines"
+    },
+    {
+      "label": "PLAN has numbered steps",
+      "status": "PASS",
+      "details": "Looks for '1.' or '1)' numbering"
+    },
+    {
+      "label": "PLAN references files to create",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "label": "PLAN references acceptance criteria",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "label": "PLAN is substantive (>15 lines)",
+      "status": "PASS",
+      "details": "149 lines"
+    },
+    {
+      "label": "VALIDATION has pass/fail verdicts",
+      "status": "PASS",
+      "details": "44 passes, 0 fails"
+    },
+    {
+      "label": "VALIDATION has evidence (commands/output)",
+      "status": "PASS",
+      "details": "Looks for code blocks or command output"
+    },
+    {
+      "label": "VALIDATION has zero failures",
+      "status": "PASS",
+      "details": "0 failure(s)"
+    },
+    {
+      "label": "SPEC echoes task keywords (>50% overlap)",
+      "status": "PASS",
+      "details": "66% overlap (49/74 keywords)"
+    },
+    {
+      "label": "VALIDATION covers all ACs from task",
+      "status": "PASS",
+      "details": "6/6 criteria referenced"
+    },
+    {
+      "label": "No credential/secret files in build",
+      "status": "PASS",
+      "details": "Clean"
+    },
+    {
+      "label": "build/no-trailing-whitespace.sh has no TODO/FIXME placeholders",
+      "status": "PASS",
+      "details": "Clean"
+    },
+    {
+      "label": "build/no-trailing-whitespace.sh is substantive (>10 lines)",
+      "status": "PASS",
+      "details": "34 lines"
+    },
+    {
+      "label": "VALIDATION claims match build existence",
+      "status": "PASS",
+      "details": "Consistent"
+    },
+    {
+      "label": "Build files are referenced in PLAN",
+      "status": "PASS",
+      "details": "1/1 build files mentioned in plan"
+    },
+    {
+      "label": "SPEC quality: 5/5",
+      "status": "PASS",
+      "details": "Every original task requirement is faithfully captured with explicit, mechanically verifiable acceptance criteria and clear behavioral specification including invocation, detection pattern, and output format."
+    },
+    {
+      "label": "SPEC judge details",
+      "status": "PASS",
+      "details": "Score: 5/5 | Every original task requirement is faithfully captured with explicit, mechanically verifiable acceptance criteria and clear behavioral specification including invocation, detection pattern, and output format. | Weakness: The Bash ≥ 4.0 assumption in Section 7 is a minor over-specification since the task only requires POSIX/bash and the script could likely work with earlier versions, but this doesn't materially harm the spec."
+    },
+    {
+      "label": "PLAN quality: 5/5",
+      "status": "PASS",
+      "details": "Exceptional detail throughout — exact commands for every validation step, a files table with purposes, precise test-repo setup with printf byte content, and risk mitigations addressing edge cases like pipefail/pip false positives."
+    },
+    {
+      "label": "PLAN judge details",
+      "status": "PASS",
+      "details": "Score: 5/5 | Exceptional detail throughout — exact commands for every validation step, a files table with purposes, precise test-repo setup with printf byte content, and risk mitigations addressing edge cases like pipefail/pip false positives. | Weakness: The jig script logic is interleaved prose and snippets rather than a single copy-paste-ready source block, but the detail is sufficient to eliminate ambiguity."
+    },
+    {
+      "label": "VALIDATION quality: 4/5",
+      "status": "PASS",
+      "details": "Every AC is explicitly tested with real command output, exit codes, and both positive/negative evidence (e.g., clean.md absent from violations, no find command present)."
+    },
+    {
+      "label": "VALIDATION judge details",
+      "status": "PASS",
+      "details": "Score: 4/5 | Every AC is explicitly tested with real command output, exit codes, and both positive/negative evidence (e.g., clean.md absent from violations, no find command present). | Weakness: Temp directory paths look sanitized placeholders (/tmp/tmp.xxx) rather than real mktemp output; no edge-case failure testing (e.g., non-git directory, empty repo, permission errors)."
+    },
+    {
+      "label": "First run — establishing baseline",
+      "status": "PASS",
+      "details": "No previous runs to compare"
+    },
+    {
+      "label": "Model info recorded",
+      "status": "PASS",
+      "details": "glm-5.1"
+    }
+  ]
+}

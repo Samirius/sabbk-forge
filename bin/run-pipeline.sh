@@ -96,6 +96,14 @@ case "$MODE" in
           npx pi --print --mode text --provider "$PROV" --model "$MODEL" --thinking low \
           --session-id "${AGENT_1}-pipeline" --tools write,bash,read,ls,git \
           --append-system-prompt "$(cat "$ROOT/spike/workdir/$AGENT_1/AGENTS.md")" "$GEAR_1_MSG"
+        # Auto-eval after repo-build too
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+        EVAL_DIR="$ROOT/evals/results/$AGENT_1/$TIMESTAMP"
+        mkdir -p "$EVAL_DIR"
+        EVAL_FLAG="--no-judge"
+        [ -n "${GLM_API_KEY:-}" ] && EVAL_FLAG="--judge"
+        echo "▶ AUTO-EVAL ($EVAL_FLAG)"
+        node "$ROOT/evals/bin/score.mjs" "pipeline-$NAME" "$EVAL_DIR" "$EVAL_FLAG" 2>/dev/null || true
         ;;
       *)
         echo "unknown delegate: $DELEGATE_1"

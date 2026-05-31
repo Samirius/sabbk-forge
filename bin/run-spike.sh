@@ -34,6 +34,7 @@ if [ "$MODE" = "--dry-run" ]; then
   echo; echo "STAGE 4 BUILD ($BUILD_STAGE):";  adapter cmd "$ID" "$BUILD_STAGE" "$M_BUILD" --resume
   echo; echo "STAGE 5 VALIDATE ($VALIDATE_STAGE):"; adapter cmd "$ID" "$VALIDATE_STAGE" "$M_VALID" --resume
   echo; echo "STAGE 6 jigs: bash jigs/run-all.sh"
+  echo; echo "STAGE 7 eval: node evals/bin/score.mjs <taskId> <workdir> [--judge|--no-judge]"
   echo; echo "✅ dry run complete — every step is deterministic and copy-pasteable."
   exit 0
 fi
@@ -69,6 +70,28 @@ if [ "$MODE" = "--resume-build" ]; then
   logger --stage "${VALIDATE_STAGE}" --start
   echo "▶ STAGE 5 VALIDATE ($VALIDATE_STAGE)"; adapter spawn "$ID" "$VALIDATE_STAGE" "$M_VALID" --resume; logger --stage "${VALIDATE_STAGE}" --end $?
   echo "▶ STAGE 6 jigs";     bash "$ROOT/jigs/run-all.sh" || true
+
+  # ── STAGE 7: AUTO-EVAL ──────────────────────────────────
+  # Runs after every build. Tier 1+2 always (free). Tier 3 when GLM_API_KEY is set.
+  EVAL_TASK_ID="${EVAL_TASK_ID:-}"   # set this to match a file in evals/tasks/ if known
+  EVAL_FLAG="--no-judge"
+  [ -n "${GLM_API_KEY:-}" ] && EVAL_FLAG="--judge"
+  echo "▶ STAGE 7 eval ($EVAL_FLAG)"
+  TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+  EVAL_DIR="$ROOT/evals/results/$ID/$TIMESTAMP"
+  mkdir -p "$EVAL_DIR"
+  # Capture outputs for eval
+  cp -f "$WORKDIR"/{SPEC.md,PLAN.md,VALIDATION.md,TASK.md} "$EVAL_DIR/" 2>/dev/null || true
+  cp -r "$WORKDIR/build" "$EVAL_DIR/" 2>/dev/null || true
+  # Score
+  if node "$ROOT/evals/bin/score.mjs" "${EVAL_TASK_ID:-auto}" "$EVAL_DIR" "$EVAL_FLAG"; then
+    echo "  ✅ eval passed"
+  else
+    echo "  ⚠️  eval has failures — review $EVAL_DIR/score.json"
+  fi
+  # Also score in-place for immediate visibility
+  node "$ROOT/evals/bin/score.mjs" "${EVAL_TASK_ID:-auto}" "$WORKDIR" "$EVAL_FLAG" 2>/dev/null || true
+
   echo "✅ spike pipeline complete for $ID. Review ./spike/workdir/$ID/VALIDATION.md."
   exit 0
 fi
