@@ -1,0 +1,12 @@
+{
+  "steps": [
+    {
+      "agent": "pi-software",
+      "stage": "spec",
+      "delegate": "run-spike",
+      "message": "You are fixing P2 bugs in the myHR attendance system (Laravel + Vue 3). Read the bug list at docs/BUG-HUNT-2026-05-21.md. Start with ATT-010 through ATT-015 (6 bugs: cross-company data leak, non-deterministic shift queries, N+1 queries, missing checkout handling, timezone issues). For each bug: (1) read the affected file, (2) write the minimal fix, (3) write VALIDATION.md with evidence. Work only in ~/myhr on branch fix/attendance-p2-batch1-ai.",
+      "consumes": "",
+      "produces": "VALIDATION.md"
+    }
+  ]
+}
