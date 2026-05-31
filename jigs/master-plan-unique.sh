@@ -54,7 +54,7 @@ if [ "$COUNT" -gt 1 ]; then
     fi
   done
   _assert "all copies are byte-identical (or dedup needed)" "[ \"$ALL_MATCH\" = true ]"
-  
+
   if [ "$ALL_MATCH" = false ]; then
     echo "  ⚠️  Master plan copies differ — dedup needed"
     echo "  Fix: pick one source (recommend sabbk-workshop), make others symlink or pointer"

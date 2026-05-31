@@ -36,30 +36,30 @@ STAGE_COUNT=0
 for log in $LOG_FILES; do
   STAGE_NAME=$(basename "$(dirname "$log")")
   echo "── Stage: $STAGE_NAME ($(basename "$log"))"
-  
+
   # Parse JSONL entries for token usage
   STAGE_INPUT=0
   STAGE_OUTPUT=0
   STAGE_CACHE=0
   ENTRIES=0
-  
+
   while IFS= read -r line; do
     # Extract token counts from JSONL entries
     INPUT=$(echo "$line" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('usage',{}).get('input_tokens',0))" 2>/dev/null || echo "0")
     OUTPUT=$(echo "$line" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('usage',{}).get('output_tokens',0))" 2>/dev/null || echo "0")
     CACHE=$(echo "$line" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('usage',{}).get('cache_read_tokens',0))" 2>/dev/null || echo "0")
-    
+
     STAGE_INPUT=$((STAGE_INPUT + INPUT))
     STAGE_OUTPUT=$((STAGE_OUTPUT + OUTPUT))
     STAGE_CACHE=$((STAGE_CACHE + CACHE))
     ENTRIES=$((ENTRIES + 1))
   done < "$log"
-  
+
   TOTAL_INPUT=$((TOTAL_INPUT + STAGE_INPUT))
   TOTAL_OUTPUT=$((TOTAL_OUTPUT + STAGE_OUTPUT))
   TOTAL_CACHE=$((TOTAL_CACHE + STAGE_CACHE))
   STAGE_COUNT=$((STAGE_COUNT + 1))
-  
+
   echo "  Input: $STAGE_INPUT | Output: $STAGE_OUTPUT | Cache: $STAGE_CACHE | Entries: $ENTRIES"
 done
 
