@@ -1,0 +1,5 @@
+# Smoke Suite — 3 quick tasks, mechanical + quality checks (no LLM judge)
+tasks:
+  - 001-trailing-whitespace
+  - 002-markdown-toc
+  - 003-branch-lint

@@ -1,0 +1,5 @@
+# Full Suite — all tasks + LLM-as-judge scoring
+tasks:
+  - 001-trailing-whitespace
+  - 002-markdown-toc
+  - 003-branch-lint
