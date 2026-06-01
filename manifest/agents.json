@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "_comment": "Agent Roster Manifest — single source of truth. All agents run via the one `pi` CLI, differentiated by kind/tools/stages. Models: haiku here keeps demos cheap; PRODUCTION swaps managers to a smart (Sonnet/Opus-class) id from `pi --list-models` and keeps grunt stages cheap. Manager pattern (D21): each domain agent is manager-only now; specialist sub-agents are added when a single agent gets overloaded.",
+  "_comment": "Agent Roster Manifest \u2014 single source of truth. All agents run via the one `pi` CLI, differentiated by kind/tools/stages. Models: haiku here keeps demos cheap; PRODUCTION swaps managers to a smart (Sonnet/Opus-class) id from `pi --list-models` and keeps grunt stages cheap. Manager pattern (D21): each domain agent is manager-only now; specialist sub-agents are added when a single agent gets overloaded.",
   "agents": [
     {
       "id": "pi-pm",
@@ -30,7 +30,7 @@
           "ls"
         ]
       },
-      "playbook": "sabbk-workshop/playbooks/pm/PLAYBOOK.md",
+      "playbook": "playbooks/software.md",
       "boundaries": [
         "never read shared/personal/ or any restricted/ folder",
         "no client or Banafah work of any kind",
@@ -111,7 +111,7 @@
           "ls"
         ]
       },
-      "playbook": "sabbk-workshop/playbooks/sales/PLAYBOOK.md",
+      "playbook": "playbooks/sales.md",
       "boundaries": [
         "never read shared/personal/ or any restricted/ folder",
         "AI branches end in -ai; pull before push; never force-push",
@@ -185,7 +185,7 @@
           "ls"
         ]
       },
-      "playbook": "sabbk-workshop/playbooks/brand/PLAYBOOK.md",
+      "playbook": "playbooks/brand.md",
       "boundaries": [
         "never read shared/personal/ or any restricted/ folder",
         "no edits to other agents' workspaces",
@@ -274,7 +274,7 @@
           "ls"
         ]
       },
-      "playbook": "sabbk-workshop/playbooks/marketing/PLAYBOOK.md",
+      "playbook": "playbooks/marketing.md",
       "boundaries": [
         "never read shared/personal/ or any restricted/ folder",
         "draft+propose client deliverables before committing unless told otherwise",
@@ -378,7 +378,7 @@
           "ls"
         ]
       },
-      "playbook": "sabbk-workshop/playbooks/cro/PLAYBOOK.md",
+      "playbook": "playbooks/cro.md",
       "boundaries": [
         "never read shared/personal/ or any restricted/ folder",
         "no edits to other agents' workspaces",
@@ -465,7 +465,7 @@
           "ls"
         ]
       },
-      "playbook": "sabbk-workshop/playbooks/design/PLAYBOOK.md",
+      "playbook": "playbooks/design.md",
       "boundaries": [
         "never read shared/personal/ or any restricted/ folder",
         "no edits to other agents' workspaces",
@@ -555,7 +555,7 @@
             "provider": "glm"
           }
         },
-        "_note": "Smart (sonnet) for spec/plan judgment; cheap (haiku) for build/validate grunt — per-stage cost tiering via the adapter."
+        "_note": "Smart (sonnet) for spec/plan judgment; cheap (haiku) for build/validate grunt \u2014 per-stage cost tiering via the adapter."
       },
       "tools": {
         "spec": [
@@ -595,7 +595,7 @@
           "write"
         ]
       },
-      "playbook": "sabbk-workshop/playbooks/software/PLAYBOOK.md",
+      "playbook": "playbooks/software.md",
       "boundaries": [
         "never read shared/personal/ or any restricted/ folder",
         "work only on the branch/paths in the assignment handoff",
@@ -717,7 +717,7 @@
           "write"
         ]
       },
-      "playbook": "sabbk-workshop/playbooks/software/PLAYBOOK.md",
+      "playbook": "playbooks/software.md",
       "boundaries": [
         "never touch other agents' workspaces",
         "never read shared/personal/ or any restricted/ folder",
