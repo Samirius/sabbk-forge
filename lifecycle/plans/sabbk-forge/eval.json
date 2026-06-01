@@ -1,0 +1,17 @@
+{
+  "gate": "plan",
+  "passed": true,
+  "checks": {
+    "has_batches": true,
+    "batches_have_ids": true,
+    "batches_have_files": true,
+    "batches_have_acs": true,
+    "deps_are_valid": true,
+    "no_circular_deps": true,
+    "files_exist": true,
+    "title_quality": true
+  },
+  "score": 100,
+  "failures": [],
+  "evaluated_at": "2026-06-01T05:18:19.029Z"
+}

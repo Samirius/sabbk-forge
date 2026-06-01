@@ -1,0 +1,118 @@
+{
+  "id": "sabbk-forge-audit-2026-06-01",
+  "mode": "apply",
+  "total_batches": 7,
+  "batches": [
+    {
+      "id": "B001",
+      "title": "Fix command injection, word-splitting, and crash-on-bad-JSON in forge-log.sh",
+      "severity": "P0",
+      "files": [
+        "bin/forge-log.sh"
+      ],
+      "acceptance_criteria": [
+        "No shell variable is interpolated into a node -e string — JSON is passed via stdin or a temp file",
+        "Filenames with spaces are handled correctly (no word-splitting on ls output)",
+        "Malformed JSONL lines are skipped with a warning instead of crashing the viewer",
+        "jigs/run-all.sh still passes (no trailing whitespace introduced)"
+      ],
+      "depends_on": [],
+      "risk": "high"
+    },
+    {
+      "id": "B002",
+      "title": "Fix command injection in checkpoint heredoc and rename misleading $ID variable",
+      "severity": "P1",
+      "files": [
+        "bin/checkpoint.sh"
+      ],
+      "acceptance_criteria": [
+        "The request heredoc no longer performs shell expansion on $ARG — command substitution in ARG text must not execute",
+        "Checkpoint files are still correctly generated with the question text preserved literally",
+        "Variable names inside each case branch are descriptive (no $ID alias for a file path in the answer branch)",
+        "request/answer/resume commands still work end-to-end"
+      ],
+      "depends_on": [],
+      "risk": "medium"
+    },
+    {
+      "id": "B003",
+      "title": "Fix installer package.json check: -d → -f",
+      "severity": "P1",
+      "files": [
+        "installer/steps/45-setup-forge.sh"
+      ],
+      "acceptance_criteria": [
+        "Line 33 uses [ -f \"$FORGE_DIR/package.json\" ] instead of [ -d … ]",
+        "npm ci is executed when package.json exists as a file"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B004",
+      "title": "Fix race condition, negative-USD, and silent error-swallow in budget.mjs",
+      "severity": "P2",
+      "files": [
+        "lib/budget.mjs"
+      ],
+      "acceptance_criteria": [
+        "Concurrent guard calls cannot undercount turns (mkdir-based or file-locking mutex)",
+        "Negative USD values are rejected with an error and non-zero exit",
+        "load() only returns defaults for ENOENT; other errors (EACCES, corrupt JSON) are propagated",
+        "budget guard/record/reset commands still work correctly in single-process use"
+      ],
+      "depends_on": [],
+      "risk": "medium"
+    },
+    {
+      "id": "B005",
+      "title": "Make eval runner agent ID configurable instead of hardcoded",
+      "severity": "P2",
+      "files": [
+        "evals/bin/run-eval.sh"
+      ],
+      "acceptance_criteria": [
+        "Agent ID is accepted as an optional CLI argument with default pi-coding-spike",
+        "Usage message reflects the new argument",
+        "Existing eval invocations without the argument still work"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B006",
+      "title": "Harden YAML task-list parsing in eval suite runner",
+      "severity": "P2",
+      "files": [
+        "evals/bin/run-suite.sh"
+      ],
+      "acceptance_criteria": [
+        "Comment lines in the YAML file are not picked up as task names",
+        "Task names with spaces are handled correctly (no word-splitting on the for loop)",
+        "Existing suite YAML files still parse correctly"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B007",
+      "title": "Remove eval from jig assertion helper in master-plan-unique.sh",
+      "severity": "P3",
+      "files": [
+        "jigs/master-plan-unique.sh"
+      ],
+      "acceptance_criteria": [
+        "_assert no longer uses eval — the test expression is executed directly",
+        "All existing assertions still pass"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    }
+  ],
+  "repo": "sabbk-forge",
+  "repo_path": "/home/stark/sabbk-forge",
+  "created": "2026-06-01T05:18:18.951Z",
+  "source": "audit",
+  "scanner_ref": "scan.json:2026-06-01T05:13:26.672Z"
+}
