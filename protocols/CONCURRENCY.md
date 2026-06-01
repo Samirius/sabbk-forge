@@ -48,6 +48,7 @@ PM merges branches after all lanes complete (or after each lane if sequential).
 
 ### 4. Budget aggregation
 - Pipeline-level budget cap = sum of all lane budgets + PM overhead
+- **This prevents N×lane budget overflow** — if 3 lanes each have $0.80, the pipeline cap is $2.40 + $0.20 PM = $2.60 max
 - Per-lane budget is independent (one lane spending all its budget doesn't starve others)
 - PM monitors aggregate spend; kills all lanes if pipeline budget exceeded
 

@@ -15,5 +15,7 @@
       "delegate": "repo-build",
       "message": "Your assignment is in ./INBOX-handoff.md (+ pipeline/REQUEST-observability.md). Build it on a -ai branch via spec->plan->build->validate: write lib/run-log.mjs + bin/forge-log.sh, wire run-spike.sh, keep the diff small, run jigs, and write VALIDATION.md."
     }
-  ]
+  ],
+  "version": 1,
+  "$schema": "pipeline/v1"
 }

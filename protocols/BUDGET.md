@@ -28,3 +28,9 @@ if the cumulative total has reached `max_usd`.
 is recorded (measured/JSON mode) — a plain text-mode run still gets the turn + timeout caps but won't
 track dollars. Wiring automatic cost capture into every run is a follow-up (P2). The single biggest
 real-money lever remains **terminate-save-resume checkpoints** (waiting on a human costs nothing).
+
+## Enforcement mechanism
+- `timeout_sec`: OS-level `timeout` command wrapping the pi spawn (SIGTERM after N seconds)
+- `max_turns`: File-backed counter (`budget-state.json`) incremented by `guard`, checked before each stage
+- `max_usd`: Accumulated via `record` calls; `guard` checks cumulative spend against cap
+- **Text-mode gap:** Without `--mode json`, pi doesn't report token usage, so cost can't be measured. Budget.mjs logs a warning when recording $0.00 (likely text-mode). Turn cap and timeout still protect against runaway runs.

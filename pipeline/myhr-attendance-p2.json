@@ -1,8 +1,13 @@
 {
+  "name": "myhr-attendance-p2",
+  "description": "Pi PM assigns myHR attendance P2 bugs to Pi Software for fix via spec->plan->build->validate.",
+  "version": 1,
+  "$schema": "pipeline/v1",
   "steps": [
     {
       "agent": "pi-pm",
       "stage": "assign",
+      "consumes": "pipeline/REQUEST.md",
       "message": "Read pipeline/REQUEST.md and assign the myHR attendance P2 fix task to pi-software with a Sabbk-compliant handoff. The task: fix 6 P2 attendance bugs (ATT-010 through ATT-015) in the myHR Laravel+Vue system.",
       "produces": "spike/workdir/pi-software/INBOX-handoff.md"
     },

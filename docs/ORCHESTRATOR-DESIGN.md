@@ -8,6 +8,9 @@
 > **Each step ONLY reads the structured output of the previous step.**
 > The scanner reads the repo. The planner reads the scanner's files. The executor reads the planner's files.
 > No step re-reads the raw codebase. Context flows forward, never backward.
+>
+> **Exception:** The executor may write files (build artifacts, patches) to the repo as directed by the plan.
+> It does NOT re-read the codebase — it only writes what the plan specifies.
 
 ## The Pipeline
 
@@ -102,7 +105,8 @@ The planner checks for `context/<repo>/scan.json`. If missing or expired:
 - `modules_have_code` — each module file contains actual source code (``` blocks), not just file listings
 - `no_empty_modules` — no module file < 200 bytes
 
-If eval fails → scanner re-runs with a warning.
+If eval fails → scanner re-runs with a warning. **Maximum 3 retry attempts** before aborting with an error.
+This prevents infinite loops when the scanner has a systematic issue.
 
 ### Step 2 → Step 3 (Planner → Executor)
 
@@ -119,6 +123,8 @@ The executor checks for a valid `plan.json`. If missing:
   "repo_path": "/home/stark/myhr",
   "mode": "apply",
   "created": "2026-06-01T07:00:00Z",
+  "expires_at": "2026-06-02T07:00:00Z",
+  "ttl_hours": 24,
   "source": "audit",
   "scanner_ref": "scan.json:2026-06-01T05:00:00Z",
   "total_batches": 8,

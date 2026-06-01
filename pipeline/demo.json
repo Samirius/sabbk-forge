@@ -15,5 +15,7 @@
       "delegate": "run-spike",
       "message": "Your assignment is in ./INBOX-handoff.md. Execute it via your spec->plan->build->validate pipeline."
     }
-  ]
+  ],
+  "version": 1,
+  "$schema": "pipeline/v1"
 }

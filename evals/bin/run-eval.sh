@@ -8,13 +8,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TASK_ID="${1:-}"
 JUDGE="${2:---judge}"
 AGENT_ID="${3:-pi-coding-spike}"   # FIX: CODE-001 — configurable via CLI arg
-
 [ -z "$TASK_ID" ] && { echo "usage: run-eval.sh <task-id> [--judge|--no-judge] [agent-id]"; exit 2; }
 
 TASK_FILE="$ROOT/evals/tasks/$TASK_ID.md"
 [ -f "$TASK_FILE" ] || { echo "✗ task not found: $TASK_FILE"; exit 1; }
 
-AGENT_ID="${3:-pi-coding-spike}"
 WORKDIR="$ROOT/spike/workdir/$AGENT_ID"
 TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
 RESULT_DIR="$ROOT/evals/results/$TASK_ID/$TIMESTAMP"
@@ -51,7 +49,9 @@ echo ""
 echo "▶ Auto-approving checkpoint..."
 CHECKPOINT=$(ls -t "$WORKDIR"/CHECKPOINT-*.md 2>/dev/null | head -1)
 if [ -n "$CHECKPOINT" ]; then
-  bash "$ROOT/bin/checkpoint.sh" answer "$CHECKPOINT" "approve" 2>/dev/null || true
+  if ! bash "$ROOT/bin/checkpoint.sh" answer "$CHECKPOINT" "approve" 2>&1; then
+    echo "⚠ checkpoint approval failed (non-fatal, continuing)"
+  fi
 fi
 
 echo ""

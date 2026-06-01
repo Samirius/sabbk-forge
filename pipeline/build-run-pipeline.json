@@ -15,5 +15,7 @@
       "delegate": "repo-build",
       "message": "Build per ./INBOX-handoff.md + pipeline/REQUEST-run-pipeline.md: make bin/run-pipeline.sh data-driven on the pipeline JSON and add a repo-build mode. spec->plan->build->validate on a -ai branch; keep the diff focused; run jigs; write VALIDATION.md."
     }
-  ]
+  ],
+  "version": 1,
+  "$schema": "pipeline/v1"
 }

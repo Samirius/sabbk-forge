@@ -32,3 +32,13 @@ apply to checkpoints for free.
 - One sentence question.
 - A short, fixed option set (`approve | revise | reject`), plus free-text after `revise:`.
 - A pointer to the one artifact to review (usually `PLAN.md`).
+
+## Authentication & identity
+- Checkpoint answers are written to the filesystem — any user with write access to the workdir can answer.
+- **Identity verification:** In production, the answer should include the approver's identity (e.g., git user, Telegram user ID). This is logged in the checkpoint file's `## Decision` block.
+- For now (spike phase), filesystem access IS authentication. Production hardening will add signed answers.
+
+## Atomicity & locking
+- `checkpoint.sh answer` writes the decision atomically (temp file + rename) to prevent partial writes.
+- `checkpoint.sh request` checks for existing OPEN checkpoints before creating a new one — only one checkpoint per agent at a time.
+- `checkpoint.sh resume` verifies the checkpoint is in ANSWERED state before resuming the session.
