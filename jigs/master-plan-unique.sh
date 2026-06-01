@@ -53,7 +53,7 @@ if [ "$COUNT" -gt 1 ]; then
       fi
     fi
   done
-  _assert "all copies are byte-identical (or dedup needed)" [  \"$ALL_MATCH\" = true  ]
+  _assert "all copies are byte-identical (or dedup needed)" [ "$ALL_MATCH" = true ]
 
   if [ "$ALL_MATCH" = false ]; then
     echo "  ⚠️  Master plan copies differ — dedup needed"

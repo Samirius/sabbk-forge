@@ -7,7 +7,7 @@ fail=0
 echo "═══ running ${#JIGS[@]} jigs ═══"
 for j in "${JIGS[@]}"; do
   echo "── $j"
-  if bash "$ROOT/jigs/$j.sh"; then :; else fail=$((fail+1)); fi
+  if bash "$ROOT/jigs/$j.sh" "$ROOT"; then :; else fail=$((fail+1)); fi
 done
 echo "═══════════════════════"
 if [ "$fail" -ne 0 ]; then echo "✗ $fail jig(s) FAILED"; exit 1; fi

@@ -149,6 +149,14 @@ case "$MODE" in
     fi
     ;;
 
+  eval)
+    # forge eval <scan|plan|audit> <path> [...]
+    # v2 quality eval (LLM judge, ~$0.01-0.03 per eval)
+    WHAT="${1:-}"; shift || true
+    [ -z "$WHAT" ] && { echo "usage: forge eval <scan|plan|audit> <path> [...]"; exit 2; }
+    node "$ROOT/lib/forge-quality-eval.mjs" "$WHAT" "$@"
+    ;;
+
   *)
     echo "forge — the sabbk-forge lifecycle CLI"
     echo ""
@@ -157,6 +165,7 @@ case "$MODE" in
     echo "  audit     <repo-path> [focus]           Scan + audit (find issues → plan)"
     echo "  plan      <repo> apply|build|refactor   Create plan from source"
     echo "  apply     <plan.json> [batch-ids]       Execute batches from plan"
+    echo "  eval      <scan|plan|audit> <path>       Quality eval (LLM judge)"
     echo "  status    <repo-path>                   Show repo state"
     echo "  history   <repo-name>                   Show plans and results"
     echo ""
@@ -169,6 +178,7 @@ case "$MODE" in
     echo "  forge audit ~/myhr security"
     echo "  forge apply plan.json"
     echo "  forge apply plan.json B001 B002 --auto-approve"
+    echo "  forge eval audit lifecycle/context/myhr lifecycle/plans/myHR/AUDIT-REPORT.md"
     exit 2
     ;;
 esac
