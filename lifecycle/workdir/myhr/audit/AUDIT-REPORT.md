@@ -2,10 +2,10 @@
 
 ## Attendance Module Security Audit
 
-**Project:** myhr  
-**Branch:** main (a55ee32)  
-**Date:** 2026-05-31  
-**Auditor:** Senior Software Auditor  
+**Project:** myhr
+**Branch:** main (a55ee32)
+**Date:** 2026-05-31
+**Auditor:** Senior Software Auditor
 
 ---
 

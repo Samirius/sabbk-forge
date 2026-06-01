@@ -9,55 +9,59 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CMD="${1:-}"; ID="${2:-}"; ARG="${3:-}"
+CMD="${1:-}"
 
 case "$CMD" in
   request)
-    [ -z "$ID" ] && { echo "usage: checkpoint.sh request <agent-id> \"<question>\""; exit 2; }
-    DIR="$ROOT/spike/workdir/$ID"; mkdir -p "$DIR"
-    TS="$(date +%Y-%m-%d-%H%M%S)"; F="$DIR/CHECKPOINT-$TS.md"
-    cat > "$F" <<EOF
+    AGENT_ID="${2:-}"; QUESTION="${3:-Approve to proceed?}"
+    [ -z "$AGENT_ID" ] && { echo "usage: checkpoint.sh request <agent-id> \"<question>\""; exit 2; }
+    DIR="$ROOT/spike/workdir/$AGENT_ID"; mkdir -p "$DIR"
+    TS="$(date +%Y-%m-%d-%H%M%S)"; CHECKPOINT_FILE="$DIR/CHECKPOINT-$TS.md"
+    # FIX: SEC-002 — use quoted heredoc (<<'EOF') to prevent shell expansion.
+    # Write the question safely via printf after the heredoc.
+    cat > "$CHECKPOINT_FILE" <<'HEADER'
 ---
 type: checkpoint
-from: $ID
-to: samir
-date: $(date +%Y-%m-%d\ %H:%M)
-status: OPEN
+HEADER
+    echo "from: $AGENT_ID" >> "$CHECKPOINT_FILE"
+    echo "to: samir" >> "$CHECKPOINT_FILE"
+    echo "date: $(date +%Y-%m-%d\ %H:%M)" >> "$CHECKPOINT_FILE"
+    echo "status: OPEN" >> "$CHECKPOINT_FILE"
+    cat >> "$CHECKPOINT_FILE" <<'FOOTER'
 ---
 
 # ⏸ CHECKPOINT — decision needed
 
-**Question:** ${ARG:-Approve to proceed?}
-
-**Options:** approve | revise | reject
-
-**Context:** see PLAN.md in this directory.
-
-## Decision
+FOOTER
+    # Write the question safely — printf %s does not interpret escape sequences
+    printf '**Question:** %s\n\n**Options:** approve | revise | reject\n\n**Context:** see PLAN.md in this directory.\n\n## Decision\n' "$QUESTION" >> "$CHECKPOINT_FILE"
+    cat >> "$CHECKPOINT_FILE" <<'TAIL'
 <!-- operator: replace OPEN above with ANSWERED, then run:
-     bash bin/checkpoint.sh answer "$F" "approve|revise: <notes>" -->
-EOF
-    echo "⏸ CHECKPOINT written: $F"
+     bash bin/checkpoint.sh answer "<this-file>" "approve|revise: <notes>" -->
+TAIL
+    echo "⏸ CHECKPOINT written: $CHECKPOINT_FILE"
     echo "   The run stops here (this costs nothing while waiting)."
-    echo "   To continue:  bash bin/checkpoint.sh answer \"$F\" \"approve\"  &&  bash bin/checkpoint.sh resume $ID"
+    echo "   To continue:  bash bin/checkpoint.sh answer \"$CHECKPOINT_FILE\" \"approve\"  &&  bash bin/checkpoint.sh resume $AGENT_ID"
     exit 0
     ;;
   answer)
-    F="$ID"  # second arg is the checkpoint file for `answer`
-    [ -z "$F" ] || [ ! -f "$F" ] && { echo "usage: checkpoint.sh answer <checkpoint-file> \"<decision>\""; exit 2; }
-    printf '\n**Decision:** %s\n**AnsweredAt:** %s\n' "${ARG:-approve}" "$(date +%Y-%m-%d\ %H:%M)" >> "$F"
-    sed -i.bak 's/^status: OPEN/status: ANSWERED/' "$F" && rm -f "$F.bak"
-    echo "✓ recorded decision on $F"
+    CHECKPOINT_FILE="${2:-}"; DECISION="${3:-approve}"
+    # FIX: CODE-005 — use descriptive variable names per subcommand
+    [ -z "$CHECKPOINT_FILE" ] || [ ! -f "$CHECKPOINT_FILE" ] && { echo "usage: checkpoint.sh answer <checkpoint-file> \"<decision>\""; exit 2; }
+    printf '\n**Decision:** %s\n**AnsweredAt:** %s\n' "$DECISION" "$(date +%Y-%m-%d\ %H:%M)" >> "$CHECKPOINT_FILE"
+    sed -i.bak 's/^status: OPEN/status: ANSWERED/' "$CHECKPOINT_FILE" && rm -f "$CHECKPOINT_FILE.bak"
+    echo "✓ recorded decision on $CHECKPOINT_FILE"
     ;;
   resume)
-    [ -z "$ID" ] && { echo "usage: checkpoint.sh resume <agent-id>"; exit 2; }
-    DIR="$ROOT/spike/workdir/$ID"
-    F="$(grep -l 'status: ANSWERED' "$DIR"/CHECKPOINT-*.md 2>/dev/null | tail -1 || true)"
-    [ -z "$F" ] && { echo "✗ no ANSWERED checkpoint in $DIR — answer one first."; exit 1; }
-    DECISION="$(grep '^\*\*Decision:\*\*' "$F" | tail -1 | sed 's/^\*\*Decision:\*\* //')"
-    echo "▶ resuming $ID with decision: $DECISION"
+    AGENT_ID="${2:-}"
+    [ -z "$AGENT_ID" ] && { echo "usage: checkpoint.sh resume <agent-id>"; exit 2; }
+    DIR="$ROOT/spike/workdir/$AGENT_ID"
+    CHECKPOINT_FILE="$(grep -l 'status: ANSWERED' "$DIR"/CHECKPOINT-*.md 2>/dev/null | tail -1 || true)"
+    [ -z "$CHECKPOINT_FILE" ] && { echo "✗ no ANSWERED checkpoint in $DIR — answer one first."; exit 1; }
+    DECISION="$(grep '^\*\*Decision:\*\*' "$CHECKPOINT_FILE" | tail -1 | sed 's/^\*\*Decision:\*\* //')"
+    echo "▶ resuming $AGENT_ID with decision: $DECISION"
     case "$DECISION" in
-      approve*) bash "$ROOT/bin/run-spike.sh" --resume-build "$ID" ;;
+      approve*) bash "$ROOT/bin/run-spike.sh" --resume-build "$AGENT_ID" ;;
       *) echo "   decision was not 'approve' — not building. Update PLAN.md and re-run from PLAN stage." ;;
     esac
     ;;

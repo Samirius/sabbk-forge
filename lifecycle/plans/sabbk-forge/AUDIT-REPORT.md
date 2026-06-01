@@ -2,10 +2,10 @@
 
 # Forge Audit Report — sabbk-forge
 
-**Date:** 2026-06-01  
-**Repo:** sabbk-forge @ `ad57c2b` (main)  
-**Auditor:** Automated senior review  
-**Files reviewed:** 48 across 14 modules  
+**Date:** 2026-06-01
+**Repo:** sabbk-forge @ `ad57c2b` (main)
+**Auditor:** Automated senior review
+**Files reviewed:** 48 across 14 modules
 **Issues found:** 12 (P0: 1, P1: 2, P2: 6, P3: 3)
 
 ---

@@ -28,7 +28,7 @@ else
 fi
 
 # Install dependencies if cloned
-if [ -d "$FORGE_DIR/package.json" ]; then
+if [ -f "$FORGE_DIR/package.json" ]; then
   log_info "Installing pi and dependencies..."
   (cd "$FORGE_DIR" && npm ci) 2>/dev/null || log_warn "npm ci failed — run manually in $FORGE_DIR"
 fi

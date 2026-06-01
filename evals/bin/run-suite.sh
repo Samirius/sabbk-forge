@@ -15,7 +15,8 @@ echo "║  EVAL SUITE: $SUITE"
 echo "╚════════════════════════════════════════╝"
 
 # Parse yaml task list (simple: lines that start with "  - ")
-TASKS=$(grep '^\s*- ' "$SUITE_FILE" | sed 's/.*- //')
+# FIX: CODE-002 — filter comments and handle spaces in task names
+TASKS=$(grep -v '^\s*#' "$SUITE_FILE" | grep '^\s*- ' | sed 's/^\s*- \s*//')
 
 TOTAL=0 PASS=0 FAIL=0
 SUITE_TS=$(date -u +%Y%m%dT%H%M%SZ)

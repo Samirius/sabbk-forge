@@ -11,7 +11,7 @@ PLAN_FILE="docs/SABBK-MASTER-PLAN.md"
 REPOS=("sabbk-workshop" "sabbk-clients" "sabbk-co" "sabbk-forge")
 
 PASS=0 FAIL=0
-_assert() { if eval "$2"; then PASS=$((PASS+1)); else FAIL=$((FAIL+1)); echo "  FAIL: $1"; fi }
+_assert() { local label="$1"; shift; if "$@"; then PASS=$((PASS+1)); else FAIL=$((FAIL+1)); echo "  FAIL: $label"; fi; }
 
 echo "── master-plan-unique validation ──"
 
@@ -25,7 +25,7 @@ for repo in "${REPOS[@]}"; do
   fi
 done
 
-_assert "master plan exists in at least one repo" "[ $COUNT -ge 1 ]"
+_assert "master plan exists in at least one repo" [  $COUNT -ge 1  ]
 
 if [ "$COUNT" -eq 0 ]; then
   echo "  No copies found — skipping further checks"
@@ -53,14 +53,14 @@ if [ "$COUNT" -gt 1 ]; then
       fi
     fi
   done
-  _assert "all copies are byte-identical (or dedup needed)" "[ \"$ALL_MATCH\" = true ]"
+  _assert "all copies are byte-identical (or dedup needed)" [  \"$ALL_MATCH\" = true  ]
 
   if [ "$ALL_MATCH" = false ]; then
     echo "  ⚠️  Master plan copies differ — dedup needed"
     echo "  Fix: pick one source (recommend sabbk-workshop), make others symlink or pointer"
   fi
 else
-  _assert "single copy (ideal)" "[ $COUNT -eq 1 ]"
+  _assert "single copy (ideal)" [  $COUNT -eq 1  ]
 fi
 
 echo "  $PASS passed, $FAIL failed"
