@@ -10,6 +10,7 @@
 #   forge apply    <plan.json> [batch-ids...]      — Execute batches from a plan
 #   forge status   <repo-path>                     — Show forge state for a repo
 #   forge history  <repo-name>                     — Show plans and results
+#   forge failures [--days N] [--suggest]          — Analyze failure patterns from run logs
 #
 # Flags (for apply):
 #   --dry-run        Print commands, don't execute
@@ -157,6 +158,12 @@ case "$MODE" in
     node "$ROOT/lib/forge-quality-eval.mjs" "$WHAT" "$@"
     ;;
 
+  failures)
+    # forge failures [--days N] [--suggest]
+    shift || true
+    node "$ROOT/lib/forge-failures.mjs" "$@"
+    ;;
+
   *)
     echo "forge — the sabbk-forge lifecycle CLI"
     echo ""
@@ -166,6 +173,7 @@ case "$MODE" in
     echo "  plan      <repo> apply|build|refactor   Create plan from source"
     echo "  apply     <plan.json> [batch-ids]       Execute batches from plan"
     echo "  eval      <scan|plan|audit> <path>       Quality eval (LLM judge)"
+    echo "  failures  [--days N] [--suggest]         Analyze failure patterns"
     echo "  status    <repo-path>                   Show repo state"
     echo "  history   <repo-name>                   Show plans and results"
     echo ""
