@@ -1,318 +1,244 @@
 # Forge Orchestrator — Architecture Design
 
-> The external layer that makes the forge handle **any** software request — not just single tasks.
+> The external layer that makes the forge handle **any** software request.
+> **Context is the new programming.** Every step has a contract, every output is validated.
 
-## Problem
+## The Golden Rule
 
-The forge core pipeline (`run-spike.sh`) does one thing well:
+> **Each step ONLY reads the structured output of the previous step.**
+> The scanner reads the repo. The planner reads the scanner's files. The executor reads the planner's files.
+> No step re-reads the raw codebase. Context flows forward, never backward.
 
-```
-TASK.md → SPEC → PLAN → [checkpoint] → BUILD → VALIDATE → eval
-```
-
-But real requests are bigger:
-- "Audit myHR and fix everything" (80 bugs)
-- "Refactor the PayrollEngine" (cross-cutting)
-- "Build an ERP from scratch" (greenfield, multi-module)
-- "Make the attendance module mobile-responsive" (scoped improvement)
-
-Yesterday's `lifecycle.mjs` tried to handle this but:
-1. **Audit sends metadata, not code** — builds repo context from file listings, not actual source
-2. **Fix is one giant prompt** — no batching, no progress tracking, no resume
-3. **Build/refactor are stubs** — literally `console.log("not yet implemented")`
-4. **Bypasses the core pipeline** — calls GLM via curl or spawns pi directly, skipping spec→plan→checkpoint→build→validate
-
-## Architecture
+## The Pipeline
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     FORGE CLI (forge.sh)                      │
-│  forge audit <repo> [focus]                                   │
-│  forge apply <plan.json>                                      │
-│  forge build <repo> <spec>                                    │
-│  forge refactor <repo> <scope>                                │
-│  forge status <repo>                                          │
-└──────────┬──────────────────────────────────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 ORCHESTRATOR (lifecycle.mjs)                  │
-│                                                               │
-│  ┌─────────┐    ┌──────────┐    ┌──────────┐                │
-│  │ SCANNER │───▶│ PLANNER  │───▶│ EXECUTOR │                │
-│  │         │    │          │    │          │                │
-│  │ read    │    │ batch    │    │ runs     │                │
-│  │ code    │    │ issues   │    │ batches  │                │
-│  │ index   │    │ into     │    │ through  │                │
-│  │ modules │    │ batches  │    │ pipeline │                │
-│  └─────────┘    └──────────┘    └──────────┘                │
-│       │              │              │                         │
-│       ▼              ▼              ▼                         │
-│  context/        plan.json     progress.json                 │
-│  <repo>/         batches/      results/                      │
-│    index.md        B001.md       B001/                       │
-│                    B002.md         VALIDATION.md              │
-│                    ...             score.json                 │
-└─────────────────────────────────────────────────────────────┘
-           │                              │
-           │  per batch                    │  resume from
-           ▼                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│              CORE PIPELINE (run-spike.sh)                     │
-│                                                               │
-│  TASK.md → SPEC → PLAN → [checkpoint] → BUILD → VALIDATE    │
-│                                                               │
-│  Each batch gets its own TASK.md, its own workdir,            │
-│  its own pi session. The core pipeline is UNCHANGED.          │
-└─────────────────────────────────────────────────────────────┘
+    REPO (raw codebase)
+         │
+         ▼
+┌─────────────────────┐
+│  STEP 1: SCAN       │  No LLM. Reads files. Builds structured context.
+│                     │
+│  Input:  repo path  │
+│  Output: context/   │  ← strict contract (index.md + modules + stack.md)
+│  Eval:   structural │  ← checks output completeness
+└────────┬────────────┘
+         │  context/<repo>/
+         │    ✓ index.md      (module map, stack, git state, hotspots)
+         │    ✓ stack.md      (dependencies, versions)
+         │    ✓ module-*.md   (actual code, token-bounded)
+         │    ✓ scan.json     (machine-readable manifest)
+         ▼
+┌─────────────────────┐
+│  STEP 2: PLAN       │  LLM call. Reads context files ONLY (not repo).
+│                     │
+│  Input:  context/   │  ← auto-runs scan if missing/expired
+│  Output: plan.json  │  ← strict contract (batches with ACs)
+│  Eval:   LLM judge  │  ← scores plan quality
+└────────┬────────────┘
+         │  plans/<repo>/<id>.json
+         │    ✓ id, mode, repo, created
+         │    ✓ batches[] with id, title, files, ACs, deps
+         │    ✓ plan.json validated before executor runs
+         ▼
+┌─────────────────────┐
+│  STEP 3: EXECUTE    │  No new LLM. Runs batches through core pipeline.
+│                     │
+│  Input:  plan.json  │  ← auto-runs plan if missing
+│  Output: results/   │  ← per-batch SPEC/PLAN/BUILD/VALIDATION
+│  Eval:   per-batch  │  ← reuses existing eval framework
+└─────────────────────┘
 ```
 
-## The Three Layers
+## Contract Enforcement
 
-### Layer 1: Scanner (repo → context)
+### Step 1 → Step 2 (Scanner → Planner)
 
-**What it does:** Reads actual source code, not just file listings.
-
-**How:**
-1. Detects stack (Laravel/Vue, Astro, Node, Python, etc.)
-2. Maps the module structure (Controllers, Models, Services, routes, views)
-3. Reads key files per module (top N files by size/relevance)
-4. Builds a **module index** — a structured map of the codebase
-
-**Output:** `lifecycle/context/<repo>/`
+The planner checks for `context/<repo>/scan.json`. If missing or expired:
 ```
-index.md          — full repo map (modules, files, deps, hotspots)
-stack.md          — detected stack, versions, key dependencies
-module-<N>.md     — per-module: files, exports, known issues
+⚠️ No scanner context for myhr. Running scan first...
+🔍 Scanning: myhr
+✅ Context built. Proceeding to plan.
 ```
 
-**Context window management:**
-- Each module file ≤ 4000 tokens (roughly 16KB)
-- The index itself ≤ 2000 tokens
-- Agent reads the index first, then loads specific modules as needed
-- This is the key difference from yesterday: **the model reads actual code, not metadata**
+**scan.json** (the machine-readable contract):
+```json
+{
+  "repo": "myhr",
+  "path": "/home/stark/myhr",
+  "scanned_at": "2026-06-01T05:00:00Z",
+  "expires_after_hours": 24,
+  "modules": ["Controllers", "Models", "Services", ...],
+  "file_count": 1115,
+  "stack": {
+    "languages": ["PHP", "JavaScript", "Vue SFC"],
+    "frameworks": ["Laravel 11.31", "Vue 3.5.32"],
+    "databases": ["MySQL", "PostgreSQL"],
+    "tools": ["Sanctum", "Tailwind", "PrimeVue", "Vite"]
+  },
+  "outputs": {
+    "index": "index.md",
+    "stack": "stack.md",
+    "modules": ["module-001.md", "module-002.md", ...]
+  },
+  "eval": {
+    "passed": true,
+    "checks": {
+      "has_index": true,
+      "has_stack": true,
+      "has_modules": true,
+      "min_modules": true,
+      "modules_have_code": true,
+      "no_empty_modules": true
+    }
+  }
+}
+```
 
-### Layer 2: Planner (request → batches)
+**Eval gate (structural, free):**
+- `has_index` — index.md exists and is non-empty
+- `has_stack` — stack.md exists and has ≥1 framework
+- `has_modules` — ≥2 module-*.md files exist
+- `min_modules` — covers core directories (for Laravel: Controllers, Models, Routes at minimum)
+- `modules_have_code` — each module file contains actual source code (``` blocks), not just file listings
+- `no_empty_modules` — no module file < 200 bytes
 
-**What it does:** Takes a request + scanner output, produces a batched execution plan.
+If eval fails → scanner re-runs with a warning.
 
-**How:**
-1. Receives the request type:
-   - **audit:** "Find all issues" → issues ranked P0→P3
-   - **apply:** Given an existing audit report → batch the fixes
-   - **build:** Given a spec → decompose into buildable modules
-   - **refactor:** Given a scope → plan safe change sequence
-2. Groups work into **batches** — independent units that can run through the core pipeline
-3. Orders batches by dependency (can't fix controller before fixing the service it calls)
-4. Each batch gets: affected files, acceptance criteria, risk level
+### Step 2 → Step 3 (Planner → Executor)
 
-**Output:** `lifecycle/plans/<repo>/<plan-id>.json`
+The executor checks for a valid `plan.json`. If missing:
+```
+⚠️ No plan found. Run: forge audit <repo> or forge plan <repo> <mode> <source>
+```
+
+**plan.json contract:**
 ```json
 {
   "id": "myhr-audit-2026-06-01",
-  "repo": "/home/stark/myhr",
+  "repo": "myhr",
+  "repo_path": "/home/stark/myhr",
   "mode": "apply",
   "created": "2026-06-01T07:00:00Z",
-  "source": "lifecycle/workdir/myhr/audit/AUDIT-REPORT.md",
+  "source": "audit",
+  "scanner_ref": "scan.json:2026-06-01T05:00:00Z",
   "total_batches": 8,
   "batches": [
     {
       "id": "B001",
-      "title": "Fix attendance cross-company data leak (ATT-010)",
+      "title": "...",
       "severity": "P0",
-      "files": ["app/Http/Controllers/AttendanceController.php"],
-      "acceptance_criteria": [
-        "Users can only see attendance records from their own company",
-        "No N+1 queries on the attendance listing endpoint",
-        "Existing tests pass"
-      ],
+      "files": ["path/to/file"],
+      "acceptance_criteria": ["..."],
       "depends_on": [],
       "risk": "high",
       "branch": "fix/forge-B001-ai"
-    },
-    {
-      "id": "B002",
-      "title": "Fix shift query non-determinism (ATT-011, ATT-012)",
-      "severity": "P1",
-      "files": ["app/Services/ShiftService.php", "app/Models/Shift.php"],
-      "acceptance_criteria": [
-        "Shift queries return deterministic results",
-        "N+1 queries eliminated on shift listing"
-      ],
-      "depends_on": ["B001"],
-      "risk": "medium",
-      "branch": "fix/forge-B002-ai"
     }
   ]
 }
 ```
 
-### Layer 3: Executor (batches → results)
+**Eval gate (LLM judge, ~$0.01):**
+- `has_batches` — ≥1 batch defined
+- `batches_have_ids` — every batch has a unique B-style ID
+- `batches_have_files` — every batch lists ≥1 file
+- `batches_have_acs` — every batch has ≥1 acceptance criteria
+- `deps_are_valid` — all depends_on reference existing batch IDs
+- `no_circular_deps` — dependency graph is a DAG
+- `files_exist` — referenced files exist in the repo (if repo_path is accessible)
+- `title_quality` — titles are specific (not generic like "fix bugs")
 
-**What it does:** Runs each batch through the **existing** core pipeline. No new LLM harness.
+If eval fails → plan is rejected with specific issues listed.
 
-**How:**
-1. For each batch in the plan (respecting dependency order):
-   - Creates a `TASK.md` from the batch definition
-   - Runs `run-spike.sh --run pi-software` (or the repo-build delegate)
-   - Captures `VALIDATION.md` + eval score
-   - Updates `progress.json`
-2. If a batch fails:
-   - Logs the failure
-   - Skips dependent batches
-   - Continues with independent batches
-3. At the end, produces a summary
+### Step 3 Eval (per-batch, existing framework)
 
-**Output:** `lifecycle/plans/<repo>/<plan-id>/`
+Already implemented. Each batch runs through core pipeline which includes:
+- Stage 7 auto-eval (tier 1+2 structural, tier 3 LLM judge)
+- VALIDATION.md with pass/fail per acceptance criterion
+
+## Planner: Context-Only Operation
+
+The planner NEVER reads the raw codebase. Its context diet:
+
 ```
-progress.json       — which batches passed/failed/skipped
-B001/
-  TASK.md           — auto-generated from batch
-  SPEC.md           — from core pipeline
-  PLAN.md           — from core pipeline (with checkpoint)
-  build/            — the actual fixes
-  VALIDATION.md     — evidence
-  score.json        — eval score
-B002/
-  ...
-SUMMARY.md          — aggregated results
-```
+index.md       → full repo map (which modules exist, file counts, hotspots)
+                 This tells the planner WHERE to look.
 
-**Key insight:** The executor does NOT call GLM directly. It generates TASK.md files and feeds them to the existing `run-spike.sh` pipeline. This means all the good stuff (checkpointing, eval, budget guard) works automatically.
+module-N.md    → actual source code for specific modules
+                 The planner loads only modules relevant to the request.
+                 Each module ≤ 4000 tokens (~16KB).
 
-## Modes
-
-### `forge audit <repo> [focus]`
-```
-Scanner → reads code → module index
-         │
-         ▼
-  LLM call with actual code context
-         │
-         ▼
-  AUDIT-REPORT.md (ranked issues)
-  + plan.json (one batch per issue group)
+stack.md       → dependency list
+                 This tells the planner what versions/constraints exist.
 ```
 
-Two sub-steps:
-1. `forge audit <repo>` — scan + produce report
-2. Report includes a plan.json — can be reviewed/edited before applying
+**How the planner selects modules:**
+1. Reads `index.md` first (cheap, ~2K tokens)
+2. Identifies which modules are relevant to the request
+3. Loads only those module files
+4. If a specific file is referenced but not in any module, it can request ONE supplemental read — but this is logged as a "context miss" for scanner improvement
 
-### `forge apply <plan.json> [batch-ids]`
-```
-Planner (already done) → plan.json
-         │
-         ▼
-  Executor → for each batch:
-    generate TASK.md → run-spike.sh → capture results
-         │
-         ▼
-  progress.json + SUMMARY.md
-```
+**This means:**
+- Scanner output IS the planner's entire world
+- If the scanner missed something, the planner can't see it
+- This creates a natural feedback loop: planner logs context misses → scanner gets improved
 
-Optional `[batch-ids]` to run specific batches only:
-- `forge apply plan.json B001 B002` — run only these
-- `forge apply plan.json` — run all in dependency order
+## Context Freshness
 
-### `forge build <repo> <spec-file>`
+Scans expire. A scan from 2 days ago may be stale.
+
 ```
-Scanner → module index
-         │
-         ▼
-  Planner → decompose spec into buildable batches
-         │
-         ▼
-  Same executor as apply
+scan.json.scanned_at + scan.json.expires_after_hours < now
+→ STALE → auto-re-scan
 ```
 
-For greenfield or additive features. The spec file describes what to build; the planner breaks it into batches.
+Default: 24 hours. Configurable per repo via `FORGE_SCAN_TTL_HOURS`.
 
-### `forge refactor <repo> <scope>`
+The planner checks this before running. If stale:
 ```
-Scanner → module index (with dependency graph)
-         │
-         ▼
-  Planner → identify safe refactor sequence
-         │
-         ▼
-  Same executor as apply
+⚠️ Scanner context expired (scanned 26h ago, TTL 24h). Re-scanning...
 ```
 
-The scope can be:
-- A file path: `app/Services/PayrollEngine.php`
-- A module: `attendance`
-- A description: "extract shared validation into traits"
+## Eval Gates Summary
 
-### `forge status <repo>`
-Shows: last scan date, known plans, batch progress, issues found vs fixed.
+| Gate | Where | Cost | What it checks |
+|------|-------|------|----------------|
+| Scan eval | After scanner | Free | Output completeness (6 structural checks) |
+| Plan eval | After planner | ~$0.01 | Plan validity (8 checks, optional LLM judge) |
+| Batch eval | After each batch | ~$0.01 | Existing Stage 7 eval (reused unchanged) |
+| Summary eval | After all batches | Free | Aggregate pass rate, failure analysis |
 
-## How This Differs From Yesterday's `lifecycle.mjs`
-
-| Aspect | Yesterday | This Design |
-|--------|-----------|-------------|
-| **Context** | File type counts, key path listings | Actual source code, per-module, token-bounded |
-| **Audit** | One GLM curl call with ~4K chars of metadata | Scanner reads real code, sends per-module context |
-| **Fix** | One giant pi spawn, 10-min timeout, no batching | Batched through core pipeline, per-batch checkpoint |
-| **Build/Refactor** | Not implemented | Full implementation via same planner+executor |
-| **Core pipeline** | Bypassed (direct curl/pi) | Reused (generates TASK.md → run-spike.sh) |
-| **Progress** | None | progress.json, per-batch results, summary |
-| **Resume** | None — restart from scratch | Resume from last completed batch |
-| **Cost control** | None | Per-batch budget guard (existing) + total plan budget |
-
-## Implementation Plan
-
-### Phase 1: Scanner (the missing piece)
-- `lib/scanner.mjs` — stack detection, module mapping, file reading, context building
-- Output: `lifecycle/context/<repo>/` with token-bounded module files
-- Test: `forge status ~/myhr` shows real module structure
-
-### Phase 2: Planner (batch decomposition)
-- `lib/planner.mjs` — takes scanner output + request, produces plan.json
-- Uses LLM with real code context to produce accurate batches
-- Test: `forge audit ~/myhr` produces ranked report + batched plan
-
-### Phase 3: Executor (pipeline wiring)
-- `lib/executor.mjs` — iterates plan.json batches, generates TASK.md, calls run-spike.sh
-- Progress tracking, resume, failure handling
-- Test: `forge apply plan.json B001` runs through core pipeline
-
-### Phase 4: CLI integration
-- Rewrite `bin/forge.sh` to route modes to the new modules
-- Replace old `lifecycle.mjs` with the three-layer architecture
-
-## File Structure After Implementation
+## Updated File Structure
 
 ```
 sabbk-forge/
-  bin/
-    forge.sh              ← CLI entry point (rewritten)
-    run-spike.sh          ← UNCHANGED (core pipeline)
-    run-pipeline.sh       ← UNCHANGED (multi-gear)
-    checkpoint.sh         ← UNCHANGED
-    ...
   lib/
-    scanner.mjs           ← NEW: repo → module index
-    planner.mjs           ← NEW: request + context → batches
-    executor.mjs          ← NEW: batches → core pipeline calls
-    pi-adapter.mjs        ← UNCHANGED
-    validate.mjs          ← UNCHANGED
-    budget.mjs            ← UNCHANGED
-    run-log.mjs           ← UNCHANGED
+    scanner.mjs        ← reads repo → context/ (with scan.json + eval)
+    planner.mjs        ← reads context/ → plan.json (with eval)
+    executor.mjs       ← reads plan.json → results/ (with per-batch eval)
+    forge-eval.mjs     ← NEW: shared eval primitives for all 3 gates
   lifecycle/
-    context/              ← scanner output (gitignored)
-    plans/                ← planner output (committed)
-    workdir/              ← executor working dirs (gitignored)
-    lifecycle.mjs         ← DELETED (replaced by lib/*.mjs)
-  pipeline/               ← UNCHANGED
-  evals/                  ← UNCHANGED
-  protocols/              ← UNCHANGED
+    context/<repo>/    ← scanner output
+      scan.json        ← machine-readable manifest (the contract)
+      index.md         ← human-readable repo map
+      stack.md         ← dependencies
+      module-*.md      ← actual code (token-bounded)
+      eval.json        ← scan eval results
+    plans/<repo>/      ← planner output
+      audit-*.json     ← the plan (the contract)
+      eval.json        ← plan eval results
+      AUDIT-REPORT.md  ← human-readable audit report
+      B001/            ← executor results (per batch)
+        VALIDATION.md
+        score.json
+      progress.json    ← execution state
+      SUMMARY.md       ← aggregate results
 ```
 
 ## Design Principles
 
-1. **The core pipeline is sacred.** Scanner → Planner → Executor all feed INTO run-spike.sh. They never bypass it.
-2. **Batch size matters.** Each batch should be completable in one pipeline run (~5 min, ~$0.01). Big refactorings get split into safe sequential steps.
-3. **Human checkpoints preserved.** Each batch still stops at the plan→build gate. But the orchestrator auto-approves when `--auto-approve` is set (for trusted plans).
-4. **Resume always works.** progress.json tracks state. Kill and restart picks up where you left off.
-5. **Scanner is cheap.** No LLM calls. Just file reading and indexing. The LLM only gets involved at audit/plan time.
-6. **Context windows are managed.** Module files are token-bounded. The planner never sees the whole repo at once — it sees the index + relevant modules.
+1. **Context flows forward only.** Scanner → Planner → Executor. Never backward.
+2. **Each step has a contract.** Defined by scan.json / plan.json schema. Eval gates enforce it.
+3. **Auto-chain.** Missing prerequisite? Auto-run it. Stale context? Auto-refresh.
+4. **Eval at every gate.** No step runs without its input being validated.
+5. **Core pipeline is sacred.** Executor feeds INTO run-spike.sh. Never bypasses it.
+6. **Context is the new programming.** The scanner's output quality determines everything downstream.
