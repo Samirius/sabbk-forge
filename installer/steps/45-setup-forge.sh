@@ -40,5 +40,6 @@ if [ -d "$FORGE_DIR/jigs" ]; then
 fi
 
 # Done
+mkdir -p "$STATE_DIR"
 touch "$STATE_DIR/$STEP.done"
 log_ok "$STEP: sabbk-forge ready at $FORGE_DIR"
