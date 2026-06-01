@@ -38,7 +38,7 @@ case "$MODE" in
   scan)
     # forge scan <repo-path>
     REPO="${1:-}"; [ -z "$REPO" ] && { echo "usage: forge scan <repo-path>"; exit 2; }
-    node "$ROOT/lib/scanner.mjs" "$REPO"
+    node --max-old-space-size=512 "$ROOT/lib/scanner.mjs" "$REPO"
     ;;
 
   audit)
@@ -49,7 +49,7 @@ case "$MODE" in
 
     # Step 1: Scan (no LLM, fast)
     echo "═══ Step 1: Scan ═══"
-    node "$ROOT/lib/scanner.mjs" "$REPO"
+    node --max-old-space-size=512 "$ROOT/lib/scanner.mjs" "$REPO"
 
     # Step 2: Plan (LLM call with real code)
     echo ""

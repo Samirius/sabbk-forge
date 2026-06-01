@@ -1,275 +1,256 @@
-# AUDIT-REPORT.md
+# Audit Report: sabbk-forge
+Date: 2026-06-01T08:51:33.042Z
+Scanner: 2026-06-01T08:38:32.154Z
 
-# Forge Audit Report — sabbk-forge
+## Findings by Module
 
-**Date:** 2026-06-01
-**Repo:** sabbk-forge @ `ad57c2b` (main)
-**Auditor:** Automated senior review
-**Files reviewed:** 48 across 14 modules
-**Issues found:** 12 (P0: 1, P1: 2, P2: 6, P3: 3)
+### module-002
+- [DOCS-003] P2 [architecture] docs/ORCHESTRATOR-DESIGN.md:7 — Golden Rule states "No step re-reads the raw codebase," but Step 3 executor must read and modify raw repo files to apply batch changes through the core pipeline, contradicting the stated invariant.
 
----
+- [DOCS-004] P2 [bug] docs/ORCHESTRATOR-DESIGN.md:~105 — `plan.json` has no expiry/TTL field despite referencing `scanner_ref` to a `scan.json` that expires after 24h. A plan can be executed long after its underlying scan is stale, with no re-plan trigger.
 
-## Summary
+- [DOCS-005] P3 [completeness] docs/ORCHESTRATOR-DESIGN.md:~85 — Scanner eval failure triggers an automatic re-run ("scanner re-runs with a warning") but no maximum retry limit is specified, risking an infinite loop if structural validation consistently fails.
 
-The project is a shell/JS orchestration layer for AI coding agents. The most critical finding is a **shell-level command injection** in `bin/forge-log.sh` where unsanitized JSONL data is interpolated into a `node -e` string. Two P1 issues — a second injection vector in `checkpoint.sh` and a logic bug that prevents `npm ci` from ever running in the installer — round out the high-impact items. Budget enforcement has race-condition and negative-value gaps that could allow cap bypass under concurrent use.
+- [DOCS-006] P3 [completeness] docs/ORCHESTRATOR-DESIGN.md:~140 — Document is truncated mid-section ("stack.md → dependency list" cuts off); the Planner Context-Only Operation section, token-budget enforcement details, and any subsequent sections are incomplete.
 
----
+- [DOCS-007] P3 [cons
 
-## Issues
+### module-003
+- [EVAL-001] [P1] [bug] evals/bin/run-eval.sh:8,16 — `AGENT_ID="${3:-pi-coding-spike}"` is assigned identically on both line 8 and line 16; the first assignment is dead code (likely a merge artifact) and the comment `FIX: CODE-001` suggests this was only partially resolved
+- [EVAL-002] [P1] [bug] evals/bin/run-suite.sh:23 — `for TASK in $TASKS` performs word-splitting on an unquoted variable; task IDs containing spaces, hyphens adjacent to spaces, or glob characters will be split incorrectly or expanded, causing wrong task IDs to be passed to `run-eval.sh`
+- [EVAL-003] [P2] [bug] evals/bin/run-suite.sh:38-46 — Summary JSON is built via unquoted heredoc interpolation (`"$SUITE"`, `"$JUDGE"`); if suite name or judge flag contains double quotes, backslashes, or special characters, the output will be malformed JSON
+- [EVAL-004] [P2] [code-quality] evals/bin/run-eval.sh:40-41 — `bash ... checkpoint.sh ... 2>/dev/null || true` suppresses both stderr and the exit code; a missing or corrupt checkpoint file, or a provisioned agent in a bad state, is silently ignored and proceeds to BUILD without approval
+- [EVAL-005] [P3] [robustness] evals/bin/run-suite.sh:20-23 — If the YAML suite file contains no matching `^\s*- ` lines, `$TASKS` is empty and the loop body never executes, producing a summary of `total:0, pass:0, fail:0` with no warning or error to the user
 
-### SEC-001 — Command injection via unsanitized `$line` in `node -e` ⚠️ P0
+### module-004
+- [FORGE-001] P2 bug installer/steps/45-setup-forge.sh:43 — `.done`
 
-| | |
-|---|---|
-| **Category** | security |
-| **File** | `bin/forge-log.sh:45-55` |
-| **Risk** | high |
-| **Description** | The `while` loop reads JSONL lines into `$line`, then interpolates them into a `node -e "…JSON.parse('$line')…"` string. A single quote in any JSONL record breaks out of the JS string literal, allowing arbitrary code execution. A crafted line like `x'});require('child_process').execSync('touch /tmp/pwned');//` would execute when the log viewer runs. |
-| **Fix** | Replace the `node -e` inline script with a proper `.mjs` file that reads JSON from stdin or a file argument, eliminating shell interpolation entirely. Alternatively, pipe each line through `node -e "process.stdin.on('data',d=>{const r=JSON.parse(d);…})"` reading from stdin. |
+### module-006
+- [BUD-001] P1 [reliability] lib/budget.mjs:44-52 — Stale lock with no age/staleness detection; process crash between `mkdirSync` (lock acquire) and `rmdirSync` (unlock) permanently blocks all subsequent operations with no recovery path.
+- [BUD-002] P2 [security] lib/budget.mjs:54-58 — `unlock` swallows all errors with empty `catch {}`, masking filesystem permission failures and silently leaving the lock directory in place.
+- [BUD-003] P2 [performance] lib/budget.mjs:49 — `while (Date.now() - s < 50) {}` is a CPU-burning busy-wait spin loop; should use `setTimeout`-based polling or `Atomics.wait` instead.
+- [BUD-004] P2 [reliability] lib/budget.mjs:62 — `save` does non-atomic direct `writeFileSync`; a crash mid-write corrupts the state JSON, and the `load` function will then `process.exit(2)` with no self-healing option.
+- [BUD-005] P2 [bug] lib/budget.mjs:48,60,61 — Exit code 3 is overloaded for both "lock timeout" (line 48) and "budget exceeded" (lines 60-61), making it impossible for callers to distinguish the two failure modes.
 
----
+### module-007
+- [SCAN-001] [P1] [bug] lifecycle/context/myhr/index.md:10-12 — Duplicate database entries: `MySQL/PostgreSQL` listed as combined entry AND as separate `MySQL` and `PostgreSQL` lines — stack detection lacks deduplication, producing misleading output.
 
-### SEC-002 — Command injection via unquoted heredoc with `$ARG` ⚠️ P1
+- [SCAN-002] [P2] [bug] lifecycle/context/test-repo/scan.json:13-18 — `stack.languages` is empty `[]` despite repo containing `index.php`; stack detection completely failed to identify PHP, rendering the scan artifact unreliable.
 
-| | |
-|---|---|
-| **Category** | security |
-| **File** | `bin/checkpoint.sh:29-42` |
-| **Risk** | medium |
-| **Description** | The `request` command writes `$ARG` (the question text) into an **unquoted** heredoc (`<<EOF`, not `<<'EOF'`). Shell command substitutions like `$(malicious_cmd)` inside ARG are expanded and executed. Since ARG originates from agent LLM output, a prompt-injection attack on the agent could achieve code execution on the host. |
-| **Fix** | Either switch to a quoted heredoc (`<<'EOF'`) and write `$ARG` via a separate `sed`/`printf` append, or sanitize ARG by escaping `$` and backticks before insertion. |
+- [SCAN-003] [P2] [bug] lifecycle/context/test-repo/scan.json:23 — `has_llm_analysis: true` contradicts entirely empty stack detection (`languages`, `frameworks`, `databases`, `tools` all `[]`); flag doesn't accurately reflect analysis state.
 
----
+- [SCAN-004] [P2] [bug] lifecycle/context/test-repo/index.md:8-10 — Git metadata fields (`Branch`, `Last`, `Commits`) are all blank/empty, indicating silent failure in git metadata extraction with no error surfaced to the scan output.
 
-### BUG-001 — `package.json` existence check uses `-d` (directory) instead of `-f` (file) ⚠️ P1
+- [SCAN-005] [P3] [ux] lifecycle/context/myhr/index.md:87 — File count category `(none): 13` is ambiguous — extensionless files need a descriptive label (e.g., `no-extension` or `Makefile/config`) for actionable reporting.
 
-| | |
-|---|---|
-| **Category** | bug |
-| **File** | `installer/steps/45-setup-forge.sh:33` |
-| **Risk** | medium |
-| **Description** | `if [ -d "$FORGE_DIR/package.json" ]; then` tests whether `package.json` is a **directory**. It is always a file, so the test always fails and `npm ci` is never executed. Users get no dependency installation from the installer. |
-| **Fix** | Change `-d` to `-f`. |
+### module-008
+- [MANIFEST-003] P2 [bug] SCHEMA.md:49 — `budget.max_usd` is documented as "Soft budget ceiling" with no enforcement mechanism, yet the module brief claims "triple-layer cost guardrails"; two of the three layers are hard caps (`max_turns`, `timeout_sec`) while this one is advisory-only, making actual spend unbounded if turns/time remain within limits.
+- [MANIFEST-004] P2 [security] SCHEMA.md — No `additionalProperties: false` equivalent is documented anywhere; a typo like `"tols"` instead of `"tools"` would silently pass validation, provisioning an agent with zero allowed tools (or extra ghost fields) and no error.
+- [MANIFEST-005] P3 [risk] SCHEMA.md:38 — `model.stages` fallback is silent: if a critical stage is omitted from the overrides, the adapter falls back to `model.id` which may be an expensive planner-tier model, causing unplanned cost spikes on builder phases with no warning.
+- [MANIFEST-006] P3 [completeness] SCHEMA.md:33 — `kind` accepts only `coding` or `domain` and `runtime.harness` accepts only `pi-coding-agent` or `pi-agent-core`, but no coupling rule is documented (e.g., `kind: coding` must pair with `runtime.harness: pi-coding-agent`); a mismatch would provision the wrong harness silently.
+- [MANIFEST-007] P3 [completeness] SCHEMA.md:48 — `budget.max_turns` type is `number` with no minimum bound documented; a value of `0` or `-1` would be schema-valid but render the agent unable to execute any turns.
 
----
+### module-009
+- [PIPE-001] P1 [bug] pipeline/myhr-attendance-p2.json:21 — File is truncated mid-value (`"consumes": "s`), producing invalid JSON that will fail to load at runtime.
+- [PIPE-002] P2 [bug] pipeline/myhr-attendance-p2.json:5 — `message` references `pipeline/REQUEST.md` (trailing-whitespace jig) instead of an myHR-attendance-specific request file — wrong work request paired with this pipeline.
+- [PIPE-003] P2 [schema] pipeline/build-run-pipeline.json:3 — JSON file is truncated at `"desc`, making it invalid and unloadable; same class of truncation corruption as PIPE-001.
+- [PIPE-004] P3 [code-quality] pipeline/*.json — No `version` or `$schema` field in any pipeline JSON; a data-driven runner cannot validate file structure or detect schema drift at runtime.
+- [PIPE-005] P3 [code-quality] pipeline/demo.json,pipeline/forge-observability.json — Inconsistent top-level metadata: some pipelines have `name`/`description`, others don't; no enforced schema contract across pipeline files.
 
-### BUG-002 — Race condition on concurrent budget-state reads/writes ⚠️ P2
+### module-010
+- [PROT-001] P1 [bug] CONCURRENCY.md:29 — File is truncated mid-definition (`budget: { max_usd: number # per-lane cap`); missing closing braces, remaining Lane fields, state machine, and isolation rules — the protocol is incomplete and cannot be implemented as-is
 
-| | |
-|---|---|
-| **Category** | bug |
-| **File** | `lib/budget.mjs:18-19` (`load`/`save`) |
-| **Risk** | medium |
-| **Description** | `load()` reads `budget-state.json`, increments `turns`, then `save()` writes it back. Two concurrent `guard` calls can both read the same state, both increment, and the second write overwrites the first — allowing the turn count to undercount. Under load, `max_turns` can be exceeded. |
-| **Fix** | Use `mkdir`-based locking (atomic on POSIX), or rewrite as a single atomic update: read → check → write in one locked section. A simple approach is `mkdir "$lockdir"` (exits non-zero if exists) as a mutex. |
+- [PROT-002] P1 [security] CHECKPOINT.md:23-24 — No authentication or identity verification on `checkpoint.sh answer`; any process/user who can execute the script can approve/reject checkpoints, allowing unauthorized pipeline progression
 
----
+- [PROT-003] P1 [security] BUDGET.md:18 — `max_usd` ceiling is completely unenforced in text-mode runs; an agent in text mode can spend unbounded dollars with only `max_turns` and `timeout_sec` as indirect (and weak) proxies for cost
 
-### BUG-003 — Negative USD values subvert budget ceiling ⚠️ P2
+- [PROT-004] P2 [architecture] CONCURRENCY.md:24-29 — Per-lane `max_usd` caps are isolated with no documented aggregate pipeline-level budget limit; N concurrent lanes × per-lane cap can exceed the intended total fleet budget by Nx
 
-| | |
-|---|---|
-| **Category** | bug |
-| **File** | `lib/budget.mjs:28` |
-| **Risk** | medium |
-| **Description** | `parseFloat(arg)` accepts negative numbers. Recording `-$50` decreases cumulative spend, allowing an agent or caller to artificially reset the budget and bypass `max_usd`. |
-| **Fix** | Validate: `const usd = parseFloat(arg); if (usd < 0) { console.error("negative cost rejected"); process.exit(2); }` |
+- [PROT-005] P2 [bug] CHECKPOINT.md:22-26 — No locking or atomicity described for checkpoint file write→answer→resume flow; concurrent reads/writes to the same checkpoint file (e.g., duplicate resume calls) can cause race conditions yielding undefined pipeline state
 
----
+### module-011
+- [RUN-001] P2 [data-quality] runs/2026-05-30.jsonl:1-2 — Pipeline jumps from `spec` directly to `validate`, missing `plan` and `build` stages entirely (unlike the full 4-stage runs on 05-31)
+- [RUN-002] P2 [data-quality] runs/2026-05-31.jsonl:1-8 — All 8 entries have identical `cost_usd: 0.0123` despite duration_ms ranging from 39,633 to 96,649, strongly suggesting a hardcoded placeholder rather than actual metered cost
+- [RUN-003] P2 [completeness] runs/2026-06-01.jsonl:1-2 — Pipeline run recorded only `spec` and `plan` with `exit:0`, but no `build` or `validate` entries exist — run appears silently abandoned with no error signal
+- [RUN-004] P3 [data-quality] runs/2026-05-30.jsonl:1 — First entry omits `cost_usd` field entirely while the second entry includes it, violating schema consistency within the same file
+- [RUN-005] P2 [data-quality] runs/2026-05-30.jsonl:1 — `duration_ms: 173` for spec stage is ~500x faster than the same stage on subsequent days (55,791–126,595 ms), indicating either a mock/test run or a fundamentally different operation being logged under the same schema
 
-### BUG-004 — Word-splitting on JSONL filenames with spaces ⚠️ P2
+### module-012
+- [SPIKE-001] P1 [bug] spike/workdir/pi-brand/AGENTS.md:42 — File is truncated mid-sentence ending with `` `handoff` from pi-pm (requires ``; agent won't receive complete gear contract or safety constraints.
+- [SPIKE-002] P2 [scope] spike/workdir/pi-brand/AGENTS.md:1 — Brand agent workspace exists inside the `spike/` module with no reference from `TASK.md` or the coding agent's boundaries (`spike/workdir/pi-coding-spike/` only); likely residual noise that could confuse the coding agent.
+- [SPIKE-003] P2 [testability] spike/workdir/pi-coding-spike/test/fixtures/untracked/test.md:1 — No git repository initialization (`.git/`, `.gitignore`, or setup script) is visible anywhere in the module. The "untracked" fixture cannot validate criterion 5 (`git ls-files`) without a git repo establishing tracked vs. untracked status.
+- [SPIKE-004] P2 [completeness] spike/workdir/pi-coding-spike/build/ — Expected deliverable directory per TASK.md criterion 1 does not exist; no `SPEC.md`, `PLAN.md`, `build/no-trailing-whitespace.sh`, or `VALIDATION.md` present — task is entirely unstarted.
+- [SPIKE-005] P3 [code-quality] spike/workdir/pi-coding-spike/test/fixtures/dirty/test.sh:7,9 — Intentional trailing whitespace is invisible in diffs and can be silently stripped by editors or pre-commit hooks, breaking the dirty fixture with no visible indication.
 
-| | |
-|---|---|
-| **Category** | bug |
-| **File** | `bin/forge-log.sh:22` |
-| **Risk** | low |
-| **Description** | `FILES=($(ls -1 "$RUNS_DIR"/*.jsonl …))` uses unquoted command substitution to build the array. Filenames containing spaces or glob characters are split incorrectly. |
-| **Fix** | Use `mapfile -t FILES < <(ls -1 …)` or `shopt -s nullglob; FILES=("$RUNS_DIR"/*.jsonl)` then reverse in a loop. |
+### module-013
+- [TPL-001] P1 [bug] gear-contract.schema.yaml:1-18 — `//` comments are invalid YAML syntax (YAML requires `#`); any YAML parser will reject this file, and the `.yaml` extension is misleading since no actual schema content exists—only documentation comments.
+- [TPL-002] P1 [bug] projects/README.md:17 — File is truncated mid-sentence at `"so the agent's Va"`; documentation is incomplete and users cannot follow partial instructions.
+- [TPL-003] P2 [code-quality] gear-contract.schema.yaml:1 — File contains only documentation but has a `.yaml` extension implying parseable schema content; if `jigs/gear-contract-valid.sh` or any tooling ever loads this for validation, it will fail outright.
+- [TPL-004] P2 [maintenance] AGENTS.md.tmpl:15 — `{{PLAYBOOK}}` placeholder has no fallback or guard; if the corresponding `manifest/agents.json` entry lacks a playbook value, the rendered file will contain an empty string pointing to a nonexistent file path, breaking onboarding for every new session.
 
----
 
-### BUG-005 — Malformed JSONL line crashes the log viewer ⚠️ P2
-
-| | |
-|---|---|
-| **Category** | bug |
-| **File** | `bin/forge-log.sh:45-55` |
-| **Risk** | low |
-| **Description** | If any JSONL line contains invalid JSON, `JSON.parse` throws inside `node -e`, causing that iteration to fail. With `set -euo pipefail`, this can abort the entire log display. |
-| **Fix** | Wrap the parse in a try/catch and skip malformed lines, or pre-validate with a node script that handles errors gracefully. |
-
----
-
-### CODE-001 — Hardcoded agent ID in eval runner ⚠️ P2
-
-| | |
-|---|---|
-| **Category** | code-quality |
-| **File** | `evals/bin/run-eval.sh:12` |
-| **Risk** | low |
-| **Description** | `AGENT_ID="pi-coding-spike"` is hardcoded. To evaluate a different agent, one must edit the script. This should be a CLI parameter. |
-| **Fix** | Accept agent ID as a second positional argument with a default: `AGENT_ID="${2:-pi-coding-spike}"` (adjust arg positions accordingly). |
-
----
-
-### CODE-002 — Fragile YAML parsing with grep+sed ⚠️ P2
-
-| | |
-|---|---|
-| **Category** | code-quality |
-| **File** | `evals/bin/run-suite.sh:17` |
-| **Risk** | low |
-| **Description** | `TASKS=$(grep '^\s*- ' "$SUITE_FILE" | sed 's/.*- //')` picks up any line starting with whitespace + `-`, including comments or nested structures. The subsequent `for TASK in $TASKS` also breaks on task names containing spaces. |
-| **Fix** | Use a simple Node script to parse YAML (project already depends on Node), or enforce strict YAML formatting and add a comment filter (`grep -v '^\s*#'`). |
-
----
-
-### CODE-003 — `load()` silently catches all errors ⚠️ P3
-
-| | |
-|---|---|
-| **Category** | code-quality |
-| **File** | `lib/budget.mjs:18` |
-| **Risk** | low |
-| **Description** | The `catch` block in `load()` returns `{turns:0, usd:0}` for any error — including permission denied, disk full, or corrupted JSON. This silently resets the budget, potentially allowing unlimited turns. |
-| **Fix** | Distinguish `ENOENT` (expected — first run) from other errors, and let non-ENOENT errors propagate. |
-
----
-
-### CODE-004 — Unnecessary `eval` in jig assertion helper ⚠️ P3
-
-| | |
-|---|---|
-| **Category** | code-quality |
-| **File** | `jigs/master-plan-unique.sh:16` |
-| **Risk** | low |
-| **Description** | `_assert() { if eval "$2"; then …` uses `eval` where plain `eval` is unnecessary. Current callers pass hardcoded test strings, so there's no live exploit, but `eval` is a hazardous pattern that should be avoided on principle. |
-| **Fix** | Replace `eval "$2"` with direct evaluation: run the test string as a command directly or restructure to pass a function name. |
-
----
-
-### CODE-005 — Misleading variable name `$ID` used for file path ⚠️ P3
-
-| | |
-|---|---|
-| **Category** | code-quality |
-| **File** | `bin/checkpoint.sh:10,32` |
-| **Risk** | low |
-| **Description** | `$ID` is set from `$2` at the top. For the `answer` subcommand, `$2` is a checkpoint **file path**, but the variable is named `ID`, suggesting an agent identifier. The alias `F="$ID"` on line 32 is the only clue. This makes the code harder to reason about and maintain. |
-| **Fix** | Don't set `ID` globally. Parse arguments per-subcommand inside each case branch with descriptive names. |
-
----
-
-## Batch Plan
-
-| Batch | Priority | Files touched | Issues |
-|---|---|---|---|
-| B001 | P0 | `bin/forge-log.sh` | SEC-001, BUG-004, BUG-005 |
-| B002 | P1 | `bin/checkpoint.sh` | SEC-002, CODE-005 |
-| B003 | P1 | `installer/steps/45-setup-forge.sh` | BUG-001 |
-| B004 | P2 | `lib/budget.mjs` | BUG-002, BUG-003, CODE-003 |
-| B005 | P2 | `evals/bin/run-eval.sh` | CODE-001 |
-| B006 | P2 | `evals/bin/run-suite.sh` | CODE-002 |
-| B007 | P3 | `jigs/master-plan-unique.sh` | CODE-004 |
-
----
-
+## Execution Plan
 ```json
 {
   "id": "sabbk-forge-audit-2026-06-01",
   "mode": "apply",
-  "total_batches": 7,
+  "total_batches": 11,
   "batches": [
     {
       "id": "B001",
-      "title": "Fix command injection, word-splitting, and crash-on-bad-JSON in forge-log.sh",
-      "severity": "P0",
-      "files": ["bin/forge-log.sh"],
+      "title": "Fix lib/budget.mjs lock staleness, atomic writes, busy-wait, and exit-code collision",
+      "severity": "P1",
+      "files": ["lib/budget.mjs"],
       "acceptance_criteria": [
-        "No shell variable is interpolated into a node -e string — JSON is passed via stdin or a temp file",
-        "Filenames with spaces are handled correctly (no word-splitting on ls output)",
-        "Malformed JSONL lines are skipped with a warning instead of crashing the viewer",
-        "jigs/run-all.sh still passes (no trailing whitespace introduced)"
+        "Lock acquisition includes age/staleness detection with automatic recovery for orphaned locks (BUD-001)",
+        "unlock() logs or surfaces filesystem errors instead of empty catch{} (BUD-002)",
+        "Busy-wait spin loop replaced with setTimeout-based polling or Atomics.wait (BUD-003)",
+        "save() uses atomic write pattern (write-to-temp + rename) to prevent mid-write corruption (BUD-004)",
+        "Exit codes 3 (lock timeout) and 3 (budget exceeded) use distinct codes so callers can differentiate (BUD-005)"
       ],
       "depends_on": [],
       "risk": "high"
     },
     {
       "id": "B002",
-      "title": "Fix command injection in checkpoint heredoc and rename misleading $ID variable",
+      "title": "Fix eval shell scripts: dead code, word-splitting, JSON injection, silent failures",
       "severity": "P1",
-      "files": ["bin/checkpoint.sh"],
+      "files": ["evals/bin/run-eval.sh", "evals/bin/run-suite.sh"],
       "acceptance_criteria": [
-        "The request heredoc no longer performs shell expansion on $ARG — command substitution in ARG text must not execute",
-        "Checkpoint files are still correctly generated with the question text preserved literally",
-        "Variable names inside each case branch are descriptive (no $ID alias for a file path in the answer branch)",
-        "request/answer/resume commands still work end-to-end"
+        "Duplicate AGENT_ID assignment on line 8 of run-eval.sh removed (EVAL-001)",
+        "$TASKS in run-suite.sh is properly quoted or uses array to avoid word-splitting/glob bugs (EVAL-002)",
+        "Summary JSON heredoc in run-suite.sh uses escaped or properly quoted interpolation to prevent malformed JSON (EVAL-003)",
+        "checkpoint.sh invocation in run-eval.sh does not silently swallow errors; stderr or exit code is surfaced (EVAL-004)",
+        "Empty TASKS result produces a clear warning/error to the user instead of silent zero-summary (EVAL-005)"
       ],
       "depends_on": [],
       "risk": "medium"
     },
     {
       "id": "B003",
-      "title": "Fix installer package.json check: -d → -f",
-      "severity": "P1",
-      "files": ["installer/steps/45-setup-forge.sh"],
+      "title": "Complete and correct docs/ORCHESTRATOR-DESIGN.md: truncation, Golden Rule contradiction, plan TTL, retry limit",
+      "severity": "P2",
+      "files": ["docs/ORCHESTRATOR-DESIGN.md"],
       "acceptance_criteria": [
-        "Line 33 uses [ -f \"$FORGE_DIR/package.json\" ] instead of [ -d … ]",
-        "npm ci is executed when package.json exists as a file"
+        "Golden Rule rewritten to allow executor file modifications while preserving no-re-read-of-raw-codebase intent (DOCS-003)",
+        "plan.json schema includes expiry/TTL field with re-plan trigger when scan.json is stale (DOCS-004)",
+        "Scanner eval failure specifies a maximum retry limit to prevent infinite loops (DOCS-005)",
+        "Truncated sections completed: Planner Context-Only Operation, token-budget enforcement, and all subsequent sections (DOCS-006)",
+        "Incomplete issue reference resolved or removed (DOCS-007)"
       ],
       "depends_on": [],
       "risk": "low"
     },
     {
       "id": "B004",
-      "title": "Fix race condition, negative-USD, and silent error-swallow in budget.mjs",
+      "title": "Fix SCHEMA.md: budget enforcement, strict validation, stage fallback warning, kind-harness coupling, min bounds",
       "severity": "P2",
-      "files": ["lib/budget.mjs"],
+      "files": ["SCHEMA.md"],
       "acceptance_criteria": [
-        "Concurrent guard calls cannot undercount turns (mkdir-based or file-locking mutex)",
-        "Negative USD values are rejected with an error and non-zero exit",
-        "load() only returns defaults for ENOENT; other errors (EACCES, corrupt JSON) are propagated",
-        "budget guard/record/reset commands still work correctly in single-process use"
+        "budget.max_usd documents enforcement mechanism or is explicitly marked as advisory with rationale (MANIFEST-003)",
+        "Schema includes additionalProperties:false equivalent to reject unknown/typo fields at validation time (MANIFEST-004)",
+        "model.stages fallback logs a warning when falling back to model.id for cost visibility (MANIFEST-005)",
+        "Coupling rule between kind and runtime.harness is documented (MANIFEST-006)",
+        "budget.max_turns documents minimum bound (>=1) and rejects zero/negative values (MANIFEST-007)"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B005",
+      "title": "Repair truncated pipeline JSON files and add version/schema metadata",
+      "severity": "P1",
+      "files": ["pipeline/myhr-attendance-p2.json", "pipeline/build-run-pipeline.json", "pipeline/demo.json", "pipeline/forge-observability.json"],
+      "acceptance_criteria": [
+        "myhr-attendance-p2.json is valid JSON with complete consumes field (PIPE-001)",
+        "myhr-attendance-p2.json references correct myHR-attendance request file, not pipeline/REQUEST.md (PIPE-002)",
+        "build-run-pipeline.json is valid JSON with complete desc(ription) field (PIPE-003)",
+        "All pipeline JSON files include version and/or $schema field for runtime validation (PIPE-004)",
+        "All pipeline JSON files have consistent top-level name/description metadata (PIPE-005)"
+      ],
+      "depends_on": [],
+      "risk": "high"
+    },
+    {
+      "id": "B006",
+      "title": "Fix protocol docs: complete CONCURRENCY.md, add CHECKPOINT.md auth, enforce BUDGET.md max_usd",
+      "severity": "P1",
+      "files": ["CONCURRENCY.md", "CHECKPOINT.md", "BUDGET.md"],
+      "acceptance_criteria": [
+        "CONCURRENCY.md completed with full Lane definition, closing braces, state machine, and isolation rules (PROT-001)",
+        "CONCURRENCY.md documents aggregate pipeline-level budget cap to prevent N×lane budget overflow (PROT-004)",
+        "CHECKPOINT.md specifies authentication/identity verification requirement for checkpoint.sh answer (PROT-002)",
+        "CHECKPOINT.md documents locking/atomicity for checkpoint write→answer→resume flow (PROT-005)",
+        "BUDGET.md specifies enforcement mechanism for max_usd in text-mode runs, not just advisory text (PROT-003)"
+      ],
+      "depends_on": ["B001"],
+      "risk": "medium"
+    },
+    {
+      "id": "B007",
+      "title": "Fix lifecycle scan artifacts: deduplication, empty-stack detection, metadata extraction, labeling",
+      "severity": "P1",
+      "files": ["lifecycle/context/myhr/index.md", "lifecycle/context/test-repo/scan.json", "lifecycle/context/test-repo/index.md"],
+      "acceptance_criteria": [
+        "myhr/index.md database entries are deduplicated — MySQL and PostgreSQL appear once each, not as combined+separate (SCAN-001)",
+        "test-repo/scan.json stack.languages includes PHP when repo contains index.php (SCAN-002)",
+        "has_llm_analysis flag is false when all stack fields are empty (SCAN-003)",
+        "test-repo/index.md git metadata fields populated or error surfaced when extraction fails (SCAN-004)",
+        "Extensionless file category labeled descriptively (e.g., no-extension or config) instead of (none) (SCAN-005)"
       ],
       "depends_on": [],
       "risk": "medium"
     },
     {
-      "id": "B005",
-      "title": "Make eval runner agent ID configurable instead of hardcoded",
+      "id": "B008",
+      "title": "Correct run log data quality: missing stages, hardcoded costs, schema inconsistency",
       "severity": "P2",
-      "files": ["evals/bin/run-eval.sh"],
+      "files": ["runs/2026-05-30.jsonl", "runs/2026-05-31.jsonl", "runs/2026-06-01.jsonl"],
       "acceptance_criteria": [
-        "Agent ID is accepted as an optional CLI argument with default pi-coding-spike",
-        "Usage message reflects the new argument",
-        "Existing eval invocations without the argument still work"
+        "2026-05-30.jsonl includes plan and build stages or documents their absence as intentional skip (RUN-001)",
+        "2026-05-31.jsonl cost_usd values reflect actual metered duration rather than identical hardcoded placeholder (RUN-002)",
+        "2026-06-01.jsonl includes build/validate entries or records an error/abort signal (RUN-003)",
+        "2026-05-30.jsonl entries have consistent schema — all entries include cost_usd field (RUN-004)",
+        "2026-05-30.jsonl spec entry duration_ms is realistic or annotated as mock/test data (RUN-005)"
       ],
       "depends_on": [],
       "risk": "low"
     },
     {
-      "id": "B006",
-      "title": "Harden YAML task-list parsing in eval suite runner",
-      "severity": "P2",
-      "files": ["evals/bin/run-suite.sh"],
+      "id": "B009",
+      "title": "Fix spike workspace: complete AGENTS.md truncation, add git repo fixture, create build deliverables, fix dirty fixture",
+      "severity": "P1",
+      "files": ["spike/workdir/pi-brand/AGENTS.md", "spike/workdir/pi-coding-spike/test/fixtures/untracked/test.md", "spike/workdir/pi-coding-spike/test/fixtures/dirty/test.sh", "spike/workdir/pi-coding-spike/build/"],
       "acceptance_criteria": [
-        "Comment lines in the YAML file are not picked up as task names",
-        "Task names with spaces are handled correctly (no word-splitting on the for loop)",
-        "Existing suite YAML files still parse correctly"
+        "pi-brand/AGENTS.md completed — truncation resolved, full handoff/gear contract text present (SPIKE-001)",
+        "pi-brand workspace either properly referenced from TASK.md or removed if residual noise (SPIKE-002)",
+        "Git repository initialized in spike module so untracked fixture can validate git ls-files criterion (SPIKE-003)",
+        "build/ directory created with SPEC.md, PLAN.md, no-trailing-whitespace.sh, and VALIDATION.md per TASK.md (SPIKE-004)",
+        "Dirty test fixture trailing whitespace documented with visible marker or alternative approach resistant to editor stripping (SPIKE-005)"
       ],
       "depends_on": [],
-      "risk": "low"
+      "risk": "medium"
     },
     {
-      "id": "B007",
-      "title": "Remove eval from jig assertion helper in master-plan-unique.sh",
-      "severity": "P3",
-      "files": ["jigs/master-plan-unique.sh"],
+      "id": "B010",
+      "title": "Fix template files: convert gear-contract.schema.yaml syntax, complete projects/README.md, guard AGENTS.md.tmpl placeholder",
+      "severity": "P1",
+      "files": ["gear-contract.schema.yaml", "projects/README.md", "AGENTS.md.tmpl"],
       "acceptance_criteria": [
-        "_assert no longer uses eval — the test expression is executed directly",
-        "All existing assertions still pass"
+        "gear-contract.schema.yaml uses valid YAML (# comments) or is renamed to .md if documentation-only (TPL-001, TPL-003)",
+        "projects/README.md completed — truncation at line 17 resolved with full sentence and any remaining content (TPL-002)",
+        "AGENTS.md.tmpl {{PLAYBOOK}} placeholder has fallback default or guard that fails gracefully when manifest entry is missing (TPL-004)"
+      ],
+      "depends_on": [],
+      "risk": "medium"
+    },
+    {
+      "id": "B011",
+      "title": "Fix installer 45-setup-forge.sh .done marker issue",
+      "severity": "P2",
+      "files": ["installer/steps/45-setup-forge.sh"],
+      "acceptance_criteria": [
+        "Step completes and creates/validates .done marker file correctly at line 43 (FORGE-001)"
       ],
       "depends_on": [],
       "risk": "low"

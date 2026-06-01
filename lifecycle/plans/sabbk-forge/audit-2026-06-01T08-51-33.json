@@ -1,0 +1,210 @@
+{
+  "id": "sabbk-forge-audit-2026-06-01",
+  "mode": "apply",
+  "total_batches": 11,
+  "batches": [
+    {
+      "id": "B001",
+      "title": "Fix lib/budget.mjs lock staleness, atomic writes, busy-wait, and exit-code collision",
+      "severity": "P1",
+      "files": [
+        "lib/budget.mjs"
+      ],
+      "acceptance_criteria": [
+        "Lock acquisition includes age/staleness detection with automatic recovery for orphaned locks (BUD-001)",
+        "unlock() logs or surfaces filesystem errors instead of empty catch{} (BUD-002)",
+        "Busy-wait spin loop replaced with setTimeout-based polling or Atomics.wait (BUD-003)",
+        "save() uses atomic write pattern (write-to-temp + rename) to prevent mid-write corruption (BUD-004)",
+        "Exit codes 3 (lock timeout) and 3 (budget exceeded) use distinct codes so callers can differentiate (BUD-005)"
+      ],
+      "depends_on": [],
+      "risk": "high"
+    },
+    {
+      "id": "B002",
+      "title": "Fix eval shell scripts: dead code, word-splitting, JSON injection, silent failures",
+      "severity": "P1",
+      "files": [
+        "evals/bin/run-eval.sh",
+        "evals/bin/run-suite.sh"
+      ],
+      "acceptance_criteria": [
+        "Duplicate AGENT_ID assignment on line 8 of run-eval.sh removed (EVAL-001)",
+        "$TASKS in run-suite.sh is properly quoted or uses array to avoid word-splitting/glob bugs (EVAL-002)",
+        "Summary JSON heredoc in run-suite.sh uses escaped or properly quoted interpolation to prevent malformed JSON (EVAL-003)",
+        "checkpoint.sh invocation in run-eval.sh does not silently swallow errors; stderr or exit code is surfaced (EVAL-004)",
+        "Empty TASKS result produces a clear warning/error to the user instead of silent zero-summary (EVAL-005)"
+      ],
+      "depends_on": [],
+      "risk": "medium"
+    },
+    {
+      "id": "B003",
+      "title": "Complete and correct docs/ORCHESTRATOR-DESIGN.md: truncation, Golden Rule contradiction, plan TTL, retry limit",
+      "severity": "P2",
+      "files": [
+        "docs/ORCHESTRATOR-DESIGN.md"
+      ],
+      "acceptance_criteria": [
+        "Golden Rule rewritten to allow executor file modifications while preserving no-re-read-of-raw-codebase intent (DOCS-003)",
+        "plan.json schema includes expiry/TTL field with re-plan trigger when scan.json is stale (DOCS-004)",
+        "Scanner eval failure specifies a maximum retry limit to prevent infinite loops (DOCS-005)",
+        "Truncated sections completed: Planner Context-Only Operation, token-budget enforcement, and all subsequent sections (DOCS-006)",
+        "Incomplete issue reference resolved or removed (DOCS-007)"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B004",
+      "title": "Fix SCHEMA.md: budget enforcement, strict validation, stage fallback warning, kind-harness coupling, min bounds",
+      "severity": "P2",
+      "files": [
+        "SCHEMA.md"
+      ],
+      "acceptance_criteria": [
+        "budget.max_usd documents enforcement mechanism or is explicitly marked as advisory with rationale (MANIFEST-003)",
+        "Schema includes additionalProperties:false equivalent to reject unknown/typo fields at validation time (MANIFEST-004)",
+        "model.stages fallback logs a warning when falling back to model.id for cost visibility (MANIFEST-005)",
+        "Coupling rule between kind and runtime.harness is documented (MANIFEST-006)",
+        "budget.max_turns documents minimum bound (>=1) and rejects zero/negative values (MANIFEST-007)"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B005",
+      "title": "Repair truncated pipeline JSON files and add version/schema metadata",
+      "severity": "P1",
+      "files": [
+        "pipeline/myhr-attendance-p2.json",
+        "pipeline/build-run-pipeline.json",
+        "pipeline/demo.json",
+        "pipeline/forge-observability.json"
+      ],
+      "acceptance_criteria": [
+        "myhr-attendance-p2.json is valid JSON with complete consumes field (PIPE-001)",
+        "myhr-attendance-p2.json references correct myHR-attendance request file, not pipeline/REQUEST.md (PIPE-002)",
+        "build-run-pipeline.json is valid JSON with complete desc(ription) field (PIPE-003)",
+        "All pipeline JSON files include version and/or $schema field for runtime validation (PIPE-004)",
+        "All pipeline JSON files have consistent top-level name/description metadata (PIPE-005)"
+      ],
+      "depends_on": [],
+      "risk": "high"
+    },
+    {
+      "id": "B006",
+      "title": "Fix protocol docs: complete CONCURRENCY.md, add CHECKPOINT.md auth, enforce BUDGET.md max_usd",
+      "severity": "P1",
+      "files": [
+        "CONCURRENCY.md",
+        "CHECKPOINT.md",
+        "BUDGET.md"
+      ],
+      "acceptance_criteria": [
+        "CONCURRENCY.md completed with full Lane definition, closing braces, state machine, and isolation rules (PROT-001)",
+        "CONCURRENCY.md documents aggregate pipeline-level budget cap to prevent N×lane budget overflow (PROT-004)",
+        "CHECKPOINT.md specifies authentication/identity verification requirement for checkpoint.sh answer (PROT-002)",
+        "CHECKPOINT.md documents locking/atomicity for checkpoint write→answer→resume flow (PROT-005)",
+        "BUDGET.md specifies enforcement mechanism for max_usd in text-mode runs, not just advisory text (PROT-003)"
+      ],
+      "depends_on": [
+        "B001"
+      ],
+      "risk": "medium"
+    },
+    {
+      "id": "B007",
+      "title": "Fix lifecycle scan artifacts: deduplication, empty-stack detection, metadata extraction, labeling",
+      "severity": "P1",
+      "files": [
+        "lifecycle/context/myhr/index.md",
+        "lifecycle/context/test-repo/scan.json",
+        "lifecycle/context/test-repo/index.md"
+      ],
+      "acceptance_criteria": [
+        "myhr/index.md database entries are deduplicated — MySQL and PostgreSQL appear once each, not as combined+separate (SCAN-001)",
+        "test-repo/scan.json stack.languages includes PHP when repo contains index.php (SCAN-002)",
+        "has_llm_analysis flag is false when all stack fields are empty (SCAN-003)",
+        "test-repo/index.md git metadata fields populated or error surfaced when extraction fails (SCAN-004)",
+        "Extensionless file category labeled descriptively (e.g., no-extension or config) instead of (none) (SCAN-005)"
+      ],
+      "depends_on": [],
+      "risk": "medium"
+    },
+    {
+      "id": "B008",
+      "title": "Correct run log data quality: missing stages, hardcoded costs, schema inconsistency",
+      "severity": "P2",
+      "files": [
+        "runs/2026-05-30.jsonl",
+        "runs/2026-05-31.jsonl",
+        "runs/2026-06-01.jsonl"
+      ],
+      "acceptance_criteria": [
+        "2026-05-30.jsonl includes plan and build stages or documents their absence as intentional skip (RUN-001)",
+        "2026-05-31.jsonl cost_usd values reflect actual metered duration rather than identical hardcoded placeholder (RUN-002)",
+        "2026-06-01.jsonl includes build/validate entries or records an error/abort signal (RUN-003)",
+        "2026-05-30.jsonl entries have consistent schema — all entries include cost_usd field (RUN-004)",
+        "2026-05-30.jsonl spec entry duration_ms is realistic or annotated as mock/test data (RUN-005)"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B009",
+      "title": "Fix spike workspace: complete AGENTS.md truncation, add git repo fixture, create build deliverables, fix dirty fixture",
+      "severity": "P1",
+      "files": [
+        "spike/workdir/pi-brand/AGENTS.md",
+        "spike/workdir/pi-coding-spike/test/fixtures/untracked/test.md",
+        "spike/workdir/pi-coding-spike/test/fixtures/dirty/test.sh",
+        "spike/workdir/pi-coding-spike/build/"
+      ],
+      "acceptance_criteria": [
+        "pi-brand/AGENTS.md completed — truncation resolved, full handoff/gear contract text present (SPIKE-001)",
+        "pi-brand workspace either properly referenced from TASK.md or removed if residual noise (SPIKE-002)",
+        "Git repository initialized in spike module so untracked fixture can validate git ls-files criterion (SPIKE-003)",
+        "build/ directory created with SPEC.md, PLAN.md, no-trailing-whitespace.sh, and VALIDATION.md per TASK.md (SPIKE-004)",
+        "Dirty test fixture trailing whitespace documented with visible marker or alternative approach resistant to editor stripping (SPIKE-005)"
+      ],
+      "depends_on": [],
+      "risk": "medium"
+    },
+    {
+      "id": "B010",
+      "title": "Fix template files: convert gear-contract.schema.yaml syntax, complete projects/README.md, guard AGENTS.md.tmpl placeholder",
+      "severity": "P1",
+      "files": [
+        "gear-contract.schema.yaml",
+        "projects/README.md",
+        "AGENTS.md.tmpl"
+      ],
+      "acceptance_criteria": [
+        "gear-contract.schema.yaml uses valid YAML (# comments) or is renamed to .md if documentation-only (TPL-001, TPL-003)",
+        "projects/README.md completed — truncation at line 17 resolved with full sentence and any remaining content (TPL-002)",
+        "AGENTS.md.tmpl {{PLAYBOOK}} placeholder has fallback default or guard that fails gracefully when manifest entry is missing (TPL-004)"
+      ],
+      "depends_on": [],
+      "risk": "medium"
+    },
+    {
+      "id": "B011",
+      "title": "Fix installer 45-setup-forge.sh .done marker issue",
+      "severity": "P2",
+      "files": [
+        "installer/steps/45-setup-forge.sh"
+      ],
+      "acceptance_criteria": [
+        "Step completes and creates/validates .done marker file correctly at line 43 (FORGE-001)"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    }
+  ],
+  "repo": "sabbk-forge",
+  "repo_path": "/home/stark/sabbk-forge",
+  "created": "2026-06-01T08:51:33.044Z",
+  "source": "audit",
+  "scanner_ref": "scan.json:2026-06-01T08:38:32.154Z"
+}
