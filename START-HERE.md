@@ -64,6 +64,41 @@ knows pi's command-line is `lib/pi-adapter.mjs` — if pi changes, that is the o
 
 ---
 
+### Lifecycle Forge (audit, apply, build, refactor)
+
+The forge can handle **any** software request — not just single tasks. It has three layers:
+
+1. **Scanner** — reads actual source code, builds module index (no LLM, fast)
+2. **Planner** — decomposes work into independent batches using LLM with real code context
+3. **Executor** — runs each batch through the core pipeline (spec→plan→build→validate)
+
+```bash
+# Scan a repo (no LLM, reads code)
+bash bin/forge.sh scan ~/myhr
+
+# Audit: scan + find issues + produce batched plan
+bash bin/forge.sh audit ~/myhr
+bash bin/forge.sh audit ~/myhr security    # focused audit
+
+# Execute the plan (all batches)
+bash bin/forge.sh apply plan.json
+bash bin/forge.sh apply plan.json B001 B002  # specific batches
+bash bin/forge.sh apply plan.json --dry-run  # print only
+bash bin/forge.sh apply plan.json --auto-approve  # skip checkpoints
+
+# Build new features from a spec
+bash bin/forge.sh plan myhr build features.md
+
+# Refactor a scope
+bash bin/forge.sh plan myhr refactor PayrollEngine
+
+# Check status
+bash bin/forge.sh status ~/myhr
+bash bin/forge.sh history myhr
+```
+
+See `docs/ORCHESTRATOR-DESIGN.md` for the full architecture.
+
 ### Eval Stage (automatic)
 Every pipeline run ends with **STAGE 7: AUTO-EVAL** — a quality gate that runs automatically:
 - **Tier 1+2** (free, instant): file structure, AC coverage, boundary compliance
