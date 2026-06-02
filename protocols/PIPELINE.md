@@ -35,3 +35,5 @@ bash bin/run-pipeline.sh --run demo         # gear 1 (PM assign) → stops at th
 bash bin/run-pipeline.sh --dispatch demo    # after approval → gear 2 (coding pipeline)              (needs a key)
 ```
 Add `PI_PROVIDER=glm PI_MODEL_ID=glm-4.6` to run the whole pipeline on GLM.
+
+## End

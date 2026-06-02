@@ -48,3 +48,5 @@ identity document <brand>  → create brand guide
 identity enforce <brand>   → compliance check
 identity evolve <brand>    → track + update
 ```
+
+## End

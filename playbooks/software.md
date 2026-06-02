@@ -45,8 +45,6 @@
 - Jig `playbook-complete.sh` validates no truncation
 - If file ends mid-sentence, CI fails
 
-## End
-
 ## Tool: `forge`
 ```
 forge scan <repo>       → build context
@@ -55,3 +53,5 @@ forge apply <plan.json> → execute batches
 forge eval <type> <path> → quality eval
 forge status            → current state
 ```
+
+## End

@@ -42,3 +42,5 @@ prism plan <site>       → test plan with hypotheses
 prism execute <plan>    → build + deploy variants
 prism measure <site>    → analyze test results
 ```
+
+## End

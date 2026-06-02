@@ -33,3 +33,5 @@ checkpoints) without standing up the servers. Revisit if/when concurrency outgro
   content-location; agents must not write across that line.
 - Tier-2 agents read `shared/work/` + `shared/public/` + `handoffs/` + their own dir. Never
   `shared/personal/` or any `restricted/`.
+
+## End

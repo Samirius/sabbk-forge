@@ -42,3 +42,5 @@ apply to checkpoints for free.
 - `checkpoint.sh answer` writes the decision atomically (temp file + rename) to prevent partial writes.
 - `checkpoint.sh request` checks for existing OPEN checkpoints before creating a new one — only one checkpoint per agent at a time.
 - `checkpoint.sh resume` verifies the checkpoint is in ANSWERED state before resuming the session.
+
+## End

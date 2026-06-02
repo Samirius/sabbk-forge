@@ -41,3 +41,5 @@ funnel qualify <lead>   → score + match
 funnel propose <lead>   → generate proposal
 funnel close <deal>     → contract + handoff
 ```
+
+## End
