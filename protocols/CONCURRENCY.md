@@ -93,3 +93,12 @@ Each lane's state is a JSON file at `runs/<run_id>/lanes/<gear_id>.json`:
   "pid": null
 }
 ```
+
+## Error Handling
+
+- **Lane failure:** PM marks lane state as `failed`, logs error, continues remaining lanes
+- **Budget exceeded:** `budget.mjs guard` exits with code 3 — PM catches and marks lane `budget_exceeded`
+- **Timeout:** pi-adapter `spawnSync` timeout fires — PM marks lane `timed_out`
+- **Partial recovery:** PM can re-launch individual failed lanes via `resume-lane` without restarting the entire pipeline
+
+## End

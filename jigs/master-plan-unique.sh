@@ -7,6 +7,11 @@ set -euo pipefail
 # Expected repos that have the master plan (relative to a common parent)
 # In CI this runs from sabbk-forge; locally we check sibling dirs
 PARENT="${SABBK_ROOT:-$HOME}"
+# Validate parent directory exists
+if [ ! -d "$PARENT" ]; then
+  echo "WARN: SABBK_ROOT ($PARENT) does not exist, falling back to $HOME"
+  PARENT="$HOME"
+fi
 PLAN_FILE="docs/SABBK-MASTER-PLAN.md"
 REPOS=("sabbk-workshop" "sabbk-clients" "sabbk-co" "sabbk-forge")
 
@@ -40,13 +45,16 @@ echo "  Found in: $FOUND_IN ($COUNT copies)"
 if [ "$COUNT" -gt 1 ]; then
   FIRST=""
   ALL_MATCH=true
+  FIRST_HASH=""
   for repo in "${REPOS[@]}"; do
     FILE="$PARENT/$repo/$PLAN_FILE"
     if [ -f "$FILE" ]; then
+      HASH=$(md5sum "$FILE" | cut -d' ' -f1)
       if [ -z "$FIRST" ]; then
         FIRST="$FILE"
+        FIRST_HASH="$HASH"
       else
-        if ! diff -q "$FIRST" "$FILE" > /dev/null 2>&1; then
+        if [ "$HASH" != "$FIRST_HASH" ]; then
           ALL_MATCH=false
           echo "  DIFF: $FIRST vs $FILE"
         fi

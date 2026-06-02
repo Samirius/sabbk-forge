@@ -42,3 +42,9 @@ muse plan <brand>       → content calendar + campaigns
 muse execute <plan>     → generate content
 muse measure <brand>    → pull metrics + report
 ```
+
+## Truncation Guard
+- All playbooks must end with `## End` marker
+- Jig `playbook-complete.sh` validates no truncation
+
+## End

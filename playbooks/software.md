@@ -26,11 +26,26 @@
 - Run eval suite
 - Verify no regressions
 
+### Phase 5: MEASURE
+- Track deployment metrics (uptime, error rate, latency)
+- Collect user feedback
+- Measure against acceptance criteria from Phase 2
+- Update documentation with real-world results
+- Output: metrics report + retrospective
+
 ## Quality Gates
 - Scanner eval: structural (6 checks, free)
 - Plan eval: validity (8 checks, ~$0.01)
 - Batch eval: per-batch (existing framework)
 - Summary eval: aggregate pass rate
+- Deployment health: no regressions in jigs
+
+## Truncation Guard
+- All playbooks must end with `## End` marker
+- Jig `playbook-complete.sh` validates no truncation
+- If file ends mid-sentence, CI fails
+
+## End
 
 ## Tool: `forge`
 ```

@@ -19,8 +19,8 @@ log_step "$STEP: Setting up sabbk-forge"
 if [ ! -d "$FORGE_DIR/.git" ]; then
   log_info "Cloning sabbk-forge..."
   git clone https://github.com/Samirius/sabbk-forge.git "$FORGE_DIR" 2>/dev/null || {
-    log_warn "Could not clone sabbk-forge (private repo — may need manual clone or SSH access)"
-    log_info "To clone manually: git clone git@github.com:Samirius/sabbk-forge.git $FORGE_DIR"
+    log_warn "Could not clone sabbk-forge (may need SSH key or manual clone)"
+    log_info "Try: git clone git@github.com:Samirius/sabbk-forge.git $FORGE_DIR"
   }
 else
   log_info "sabbk-forge already cloned, pulling latest..."
@@ -30,16 +30,18 @@ fi
 # Install dependencies if cloned
 if [ -f "$FORGE_DIR/package.json" ]; then
   log_info "Installing pi and dependencies..."
-  (cd "$FORGE_DIR" && npm ci) 2>/dev/null || log_warn "npm ci failed — run manually in $FORGE_DIR"
+  (cd "$FORGE_DIR" && npm ci) || { log_warn "npm ci failed — run manually in $FORGE_DIR"; touch "$STATE_DIR/$STEP.done"; exit 0; }
 fi
 
 # Validate
 if [ -d "$FORGE_DIR/jigs" ]; then
   log_info "Running forge jigs..."
-  (cd "$FORGE_DIR" && bash jigs/run-all.sh) 2>/dev/null || log_warn "Jigs failed — forge may need pi installed first"
+  (cd "$FORGE_DIR" && bash jigs/run-all.sh) || log_warn "Jigs failed — forge may need pi installed first"
 fi
 
-# Done
-mkdir -p "$STATE_DIR"
-touch "$STATE_DIR/$STEP.done"
+# Mark done only if package.json exists (clone succeeded)
+if [ -f "$FORGE_DIR/package.json" ]; then
+  mkdir -p "$STATE_DIR"
+  touch "$STATE_DIR/$STEP.done"
+fi
 log_ok "$STEP: sabbk-forge ready at $FORGE_DIR"

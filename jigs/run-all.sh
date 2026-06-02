@@ -2,7 +2,7 @@
 # Run every jig. Exit nonzero if any fail. This is the gate before any agent is considered bootable.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-JIGS=(agent-manifest-valid gear-contract-valid pipeline-wiring-valid cheap-model-self-test no-trailing-whitespace stack-node-ts stack-python stack-astro master-plan-unique)
+JIGS=(agent-manifest-valid gear-contract-valid pipeline-wiring-valid cheap-model-self-test no-trailing-whitespace stack-node-ts stack-python stack-astro master-plan-unique playbook-complete)
 fail=0
 echo "═══ running ${#JIGS[@]} jigs ═══"
 for j in "${JIGS[@]}"; do

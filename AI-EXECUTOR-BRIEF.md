@@ -8,7 +8,7 @@
 ## 0. Prerequisites
 - Node ≥ 22.19 (`node --version`), `git`, `npm`.
 - ONE provider key (pick a path):
-  - **Anthropic** (default — manifest already targets `claude-haiku-4-5`): `export ANTHROPIC_API_KEY=sk-ant-...`
+  - **Anthropic** (default — manifest already targets `claude-haiku-4-5`): `export ANTHROPIC_API_KEY=<your-key-here>`
   - **GLM / z.ai**: see "GLM variant" at the bottom.
 
 ## 1. Get + install

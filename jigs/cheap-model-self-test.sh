@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 # jig: "can a cheap, low-capability model actually follow this repo?"
 # This is the meta-jig that enforces the prime directive (WRITE FOR A DUMB EXECUTOR).
 # It checks START-HERE.md is deterministic and self-validating, with no hidden-judgment language,

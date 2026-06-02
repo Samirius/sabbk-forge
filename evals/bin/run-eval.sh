@@ -31,7 +31,11 @@ rm -f "$WORKDIR"/{SPEC.md,PLAN.md,VALIDATION.md,budget-state.json,CHECKPOINT-*.m
 rm -rf "$WORKDIR/build"
 mkdir -p "$WORKDIR/build"
 
-# 3. Provision + run full pipeline (auto-approve checkpoint)
+# 3. Verify prerequisites before running
+if [ ! -f "$WORKDIR/SPEC.md" ]; then echo "⚠ SPEC.md not created — spec stage may have failed"; fi
+if [ ! -f "$WORKDIR/PLAN.md" ]; then echo "⚠ PLAN.md not created — plan stage may have failed"; fi
+
+# Provision + run full pipeline (auto-approve checkpoint)
 export GLM_API_KEY="${GLM_API_KEY:?GLM_API_KEY must be set}"
 echo ""
 echo "▶ Provisioning $AGENT_ID..."
@@ -47,7 +51,7 @@ node "$ROOT/lib/pi-adapter.mjs" spawn "$AGENT_ID" plan "Read ./SPEC.md. Write ./
 
 echo ""
 echo "▶ Auto-approving checkpoint..."
-CHECKPOINT=$(ls -t "$WORKDIR"/CHECKPOINT-*.md 2>/dev/null | head -1)
+CHECKPOINT=$(ls -t "$WORKDIR"/CHECKPOINT-*.md 2>/dev/null | sort -r | head -1)
 if [ -n "$CHECKPOINT" ]; then
   if ! bash "$ROOT/bin/checkpoint.sh" answer "$CHECKPOINT" "approve" 2>&1; then
     echo "⚠ checkpoint approval failed (non-fatal, continuing)"
@@ -62,9 +66,11 @@ echo ""
 echo "▶ Running VALIDATE..."
 node "$ROOT/lib/pi-adapter.mjs" spawn "$AGENT_ID" validate "Verify ./build/ against ./SPEC.md acceptance criteria. Write ./VALIDATION.md: list each criterion with pass/fail and the evidence."
 
-# 4. Capture outputs
-cp -f "$WORKDIR"/{SPEC.md,PLAN.md,VALIDATION.md} "$RESULT_DIR/" 2>/dev/null || true
-[ -d "$WORKDIR/build" ] && cp -r "$WORKDIR/build" "$RESULT_DIR/" 2>/dev/null || true
+# 4. Capture outputs (fail on missing critical artifacts)
+cp -f "$WORKDIR"/SPEC.md "$RESULT_DIR/" 2>/dev/null || { echo "⚠ SPEC.md missing — pipeline may have failed"; }
+cp -f "$WORKDIR"/PLAN.md "$RESULT_DIR/" 2>/dev/null || { echo "⚠ PLAN.md missing — pipeline may have failed"; }
+cp -f "$WORKDIR"/VALIDATION.md "$RESULT_DIR/" 2>/dev/null || { echo "⚠ VALIDATION.md missing — pipeline may have failed"; }
+[ -d "$WORKDIR/build" ] && cp -r "$WORKDIR/build" "$RESULT_DIR/"
 cp -f "$TASK_FILE" "$RESULT_DIR/TASK.md"
 
 # 5. Run eval scoring

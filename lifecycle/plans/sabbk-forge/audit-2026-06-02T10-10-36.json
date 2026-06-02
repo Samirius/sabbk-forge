@@ -1,0 +1,295 @@
+{
+  "id": "sabbk-forge-audit-2026-06-02",
+  "mode": "apply",
+  "total_batches": 18,
+  "batches": [
+    {
+      "id": "B001",
+      "title": "Fix Clean Lifecycle State",
+      "severity": "P0",
+      "files": [
+        "lifecycle/context/myhr/index.md"
+      ],
+      "acceptance_criteria": [
+        "Repository is in a clean state with no uncommitted changes"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B002",
+      "title": "Secure Production API Test Script",
+      "severity": "P0",
+      "files": [
+        "spike/production-api-test.sh"
+      ],
+      "acceptance_criteria": [
+        "Password is no longer passed via CLI arguments",
+        "Sensitive data is read from environment variables or secure stdin",
+        "Script execution is verified against process list exposure"
+      ],
+      "depends_on": [],
+      "risk": "high"
+    },
+    {
+      "id": "B003",
+      "title": "Fix API Test Logic and Truncation",
+      "severity": "P1",
+      "files": [
+        "spike/production-api-test.sh"
+      ],
+      "acceptance_criteria": [
+        "Short-circuit logic in grep check is fixed to report actual status",
+        "Truncated function/flow is completed or removed",
+        "Set -euo pipefail works correctly with python3 redirection"
+      ],
+      "depends_on": [
+        "B002"
+      ],
+      "risk": "medium"
+    },
+    {
+      "id": "B004",
+      "title": "Secure Forge Setup URL",
+      "severity": "P1",
+      "files": [
+        "steps/45-setup-forge.sh"
+      ],
+      "acceptance_criteria": [
+        "Git clone uses secure, variable-based URL",
+        "Idempotency check handles clone failures gracefully"
+      ],
+      "depends_on": [],
+      "risk": "medium"
+    },
+    {
+      "id": "B005",
+      "title": "Fix Lock Validation Logic",
+      "severity": "P1",
+      "files": [
+        "budget.mjs"
+      ],
+      "acceptance_criteria": [
+        "Stale lock detection uses timestamp inside the file",
+        "Logic does not rely on filesystem mtime"
+      ],
+      "depends_on": [],
+      "risk": "medium"
+    },
+    {
+      "id": "B006",
+      "title": "Add Error Handling to Self-Test",
+      "severity": "P1",
+      "files": [
+        "jigs/cheap-model-self-test.sh"
+      ],
+      "acceptance_criteria": [
+        "Shebang includes `set -e`",
+        "Script exits immediately on command failure"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B007",
+      "title": "Sanitize Brief Documentation",
+      "severity": "P1",
+      "files": [
+        "AI-EXECUTOR-BRIEF.md"
+      ],
+      "acceptance_criteria": [
+        "Example API key is removed or replaced with a placeholder",
+        "No sensitive strings remain in the file"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B008",
+      "title": "Fix Forge Setup State Management",
+      "severity": "P2",
+      "files": [
+        "steps/45-setup-forge.sh"
+      ],
+      "acceptance_criteria": [
+        "Step file is not marked done if npm ci or validation fails",
+        "Validation runs only if npm ci succeeds",
+        "npm ci stderr is visible for debugging"
+      ],
+      "depends_on": [
+        "B004"
+      ],
+      "risk": "medium"
+    },
+    {
+      "id": "B009",
+      "title": "Fix Forge Git Network Handling",
+      "severity": "P2",
+      "files": [
+        "steps/45-setup-forge.sh"
+      ],
+      "acceptance_criteria": [
+        "Git pull checks for connectivity",
+        "Merge conflicts are detected before proceeding"
+      ],
+      "depends_on": [
+        "B004"
+      ],
+      "risk": "medium"
+    },
+    {
+      "id": "B010",
+      "title": "Refactor Budget Lock Operations",
+      "severity": "P2",
+      "files": [
+        "budget.mjs"
+      ],
+      "acceptance_criteria": [
+        "Atomics.wait replaced with non-blocking alternative or handled in worker",
+        "SIGINT signals are handled during wait",
+        "RenameSync fallback ensures atomicity"
+      ],
+      "depends_on": [
+        "B005"
+      ],
+      "risk": "high"
+    },
+    {
+      "id": "B011",
+      "title": "Secure Checkpoint Metadata",
+      "severity": "P2",
+      "files": [
+        "bin/checkpoint.sh"
+      ],
+      "acceptance_criteria": [
+        "Variables in echo statements are quoted",
+        "Injection of malicious characters is prevented"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B012",
+      "title": "Fix Checkpoint Selection Reliability",
+      "severity": "P2",
+      "files": [
+        "bin/checkpoint.sh"
+      ],
+      "acceptance_criteria": [
+        "Resume command sorts checkpoints deterministically",
+        "Logic does not rely on non-sequential filesystem timestamps"
+      ],
+      "depends_on": [
+        "B011"
+      ],
+      "risk": "low"
+    },
+    {
+      "id": "B013",
+      "title": "Fix Health Check Script",
+      "severity": "P2",
+      "files": [
+        "bin/forge-health.sh"
+      ],
+      "acceptance_criteria": [
+        "Grep pattern is compatible with macOS (BSD) and GNU",
+        "Script iterates completely over SCAN_FILES"
+      ],
+      "depends_on": [],
+      "risk": "medium"
+    },
+    {
+      "id": "B014",
+      "title": "Hardening Jigs Scripts",
+      "severity": "P2",
+      "files": [
+        "jigs/master-plan-unique.sh",
+        "jigs/no-trailing-whitespace.sh"
+      ],
+      "acceptance_criteria": [
+        "Checksums used instead of repeated diff in master-plan-unique.sh",
+        "PARENT variable validation added",
+        "Positional argument validation added in no-trailing-whitespace.sh"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B015",
+      "title": "Fix Evaluation Pipeline Robustness",
+      "severity": "P2",
+      "files": [
+        "evals/bin/run-eval.sh"
+      ],
+      "acceptance_criteria": [
+        "Pipeline verifies existence of SPEC.md and PLAN.md",
+        "File copy operations do not suppress errors"
+      ],
+      "depends_on": [],
+      "risk": "medium"
+    },
+    {
+      "id": "B016",
+      "title": "Refactor Pipeline Configurations",
+      "severity": "P2",
+      "files": [
+        "pipeline/build-run-pipeline.json",
+        "pipeline/demo.json"
+      ],
+      "acceptance_criteria": [
+        "Circular dependency risk in DOGFOOD workflow addressed",
+        "Truncated JSON message in demo.json fixed",
+        "Handoff path matches repo-root context"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B017",
+      "title": "Complete Playbooks and Protocols",
+      "severity": "P2",
+      "files": [
+        "playbooks/software.md",
+        "playbooks/marketing.md",
+        "protocols/BUDGET.md",
+        "protocols/CONCURRENCY.md"
+      ],
+      "acceptance_criteria": [
+        "Truncated sentences in playbooks completed",
+        "max_usd cap enforcement logic added to text-mode runs",
+        "Concurrency documentation completed"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    },
+    {
+      "id": "B018",
+      "title": "Cleanup Code Quality and Docs",
+      "severity": "P3",
+      "files": [
+        "evals/bin/run-eval.sh",
+        "lifecycle/context/test-repo/module-001.md",
+        "lifecycle/context/test-repo/index.md",
+        "runs/2026-06-01.jsonl",
+        "templates/AGENTS.md.tmpl",
+        "templates/projects/astro/AGENTS.md",
+        "playbooks/brand.md",
+        "protocols/CHECKPOINT.md"
+      ],
+      "acceptance_criteria": [
+        "Hardcoded AGENT_ID removed or parameterized",
+        "Fragile ls -t | head -1 replaced",
+        "Content-Type charset added to PHP snippet",
+        "Mock data removed from logs, schema consistent",
+        "Documentation aligned with standard conventions"
+      ],
+      "depends_on": [],
+      "risk": "low"
+    }
+  ],
+  "repo": "sabbk-forge",
+  "repo_path": "/home/stark/sabbk-forge",
+  "created": "2026-06-02T10:10:36.219Z",
+  "source": "audit",
+  "scanner_ref": "scan.json:2026-06-02T10:06:51.408Z"
+}

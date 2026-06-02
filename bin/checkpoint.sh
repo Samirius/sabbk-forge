@@ -56,7 +56,7 @@ TAIL
     AGENT_ID="${2:-}"
     [ -z "$AGENT_ID" ] && { echo "usage: checkpoint.sh resume <agent-id>"; exit 2; }
     DIR="$ROOT/spike/workdir/$AGENT_ID"
-    CHECKPOINT_FILE="$(grep -l 'status: ANSWERED' "$DIR"/CHECKPOINT-*.md 2>/dev/null | tail -1 || true)"
+    CHECKPOINT_FILE="$(grep -l 'status: ANSWERED' "$DIR"/CHECKPOINT-*.md 2>/dev/null | sort -r | head -1 || true)"
     [ -z "$CHECKPOINT_FILE" ] && { echo "✗ no ANSWERED checkpoint in $DIR — answer one first."; exit 1; }
     DECISION="$(grep '^\*\*Decision:\*\*' "$CHECKPOINT_FILE" | tail -1 | sed 's/^\*\*Decision:\*\* //')"
     echo "▶ resuming $AGENT_ID with decision: $DECISION"
